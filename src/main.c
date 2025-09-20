@@ -1,10 +1,17 @@
+// yo remember to move things to separate header files when the length reaches
+// 500 lines
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+// levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
+#define LOG_LEVEL 2
+
 typedef enum {
   INST_PUSH,  // push a number onto the stack
+  INST_JMP,   // jump to an instruction from the arg
+  INST_CJMP,  // pop last number. if it's 1, jump to an instruction from the arg
   INST_POP,   // pop a number off the top
   INST_DUP,   // pop the last number then push it twice
   INST_ADD,   // pop two numbers then push a + b
@@ -12,6 +19,9 @@ typedef enum {
   INST_MUL,   // pop two numbers then push a * b
   INST_DIV,   // pop two numbers then push a / b
   INST_SWAP,  // pop a then b, push b then a
+  INST_CMPE,  // pop two numbers then push a == b (1 or 0)
+  INST_CMPL,  // pop two numbers then push a < b (1 or 0)
+  INST_CMPG,  // pop two numbers then push a > b (1 or 0)
   INST_PRINT, // pop the last number and print it
   INST_HALT,  // special halt (NYI)
 } INST_SET;
@@ -31,26 +41,30 @@ typedef struct {
 } Machine;
 
 #define DEF_INST_PUSH(x) {.type = INST_PUSH, .val = x}
-#define DEF_INST_PRINT {.type = INST_PUSH}
+#define DEF_INST_CJMP(x) {.type = INST_CJMP, .val = x}
+#define DEF_INST_JMP(x) {.type = INST_JMP, .val = x}
+#define DEF_INST_PRINT {.type = INST_PRINT}
 #define DEF_INST_SWAP {.type = INST_SWAP}
+#define DEF_INST_CMPE {.type = INST_CMPE}
+#define DEF_INST_CMPL {.type = INST_CMPL}
+#define DEF_INST_CMPG {.type = INST_CMPG}
 #define DEF_INST_POP {.type = INST_POP}
 #define DEF_INST_ADD {.type = INST_ADD}
 #define DEF_INST_SUB {.type = INST_SUB}
 #define DEF_INST_MUL {.type = INST_MUL}
 #define DEF_INST_DUP {.type = INST_DUP}
 #define DEF_INST_DIV {.type = INST_DIV}
+#define DEF_INST_HALT {.type = INST_HALT}
 
 INST program[] = {
-    DEF_INST_PUSH(5),
-    DEF_INST_PUSH(10),
-    DEF_INST_SWAP,
-    DEF_INST_SUB,
+    DEF_INST_PUSH(1), DEF_INST_JMP(4),  DEF_INST_PUSH(2),
+    DEF_INST_ADD,     DEF_INST_PUSH(7), DEF_INST_PRINT,
 };
 
 #define PROGRAM_SIZE (sizeof(program) / sizeof(program[0]))
 
 void rt_err(const char *msg) {
-  fprintf(stderr, "RUNTIME ERROR: %s", msg);
+  fprintf(stderr, "RUNTIME ERROR: %s\n", msg);
   exit(1);
 }
 
@@ -94,7 +108,9 @@ void prog_read_from_file(Machine *machine, char *path) {
 
 // operations
 void push(Machine *machine, int value) {
-  printf("LOG: pushing %d to %d\n", value, machine->stack_size);
+#if (LOG_LEVEL >= 2)
+  printf("LOG: push@(%d): %d\n", machine->stack_size, value);
+#endif
   if (machine->stack_size >= MAX_STACK_SIZE)
     rt_err("stack overflow!");
 
@@ -103,7 +119,9 @@ void push(Machine *machine, int value) {
 }
 
 int pop(Machine *machine) {
-  printf("LOG: popping\n");
+#if (LOG_LEVEL >= 2)
+  printf("LOG: pop\n");
+#endif
   if (machine->stack_size <= 0)
     rt_err("stack underflow!");
 
@@ -120,6 +138,9 @@ int main(void) {
   prog_write_to_file(m, "./prog.ab");
   for (size_t ip = 0; ip < m->program_size; ip++) {
     // ip for instruction pointer
+#if (LOG_LEVEL >= 2)
+    printf("#%u\n", m->instructions[ip].type);
+#endif
     switch (m->instructions[ip].type) {
     case INST_PUSH:
       push(m, m->instructions[ip].val);
@@ -127,11 +148,12 @@ int main(void) {
     case INST_POP:
       pop(m);
       break;
-    case INST_ADD:
-      a = pop(m);
-      b = pop(m);
-      push(m, a + b);
+    case INST_ADD: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs + rhs);
       break;
+    }
     case INST_DUP:
       a = pop(m); // cuz u shouldnt peek into the stack
       push(m, a);
@@ -142,16 +164,18 @@ int main(void) {
       b = pop(m);
       push(m, b - a);
       break;
-    case INST_MUL:
-      a = pop(m);
-      b = pop(m);
-      push(m, a * b);
-      break;
-    case INST_DIV:
-      a = pop(m);
-      b = pop(m);
-      push(m, b / a);
-      break;
+    case INST_MUL: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs * rhs);
+    }
+    case INST_DIV: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      if (rhs == 0)
+        rt_err("cannot divide by 0");
+      push(m, lhs / rhs);
+    }
     case INST_SWAP:
       a = pop(m);
       b = pop(m);
@@ -159,13 +183,38 @@ int main(void) {
       push(m, b);
       break;
     case INST_PRINT:
-      printf("OUT: %d\n", pop(m)); // TODO: abstract
+      a = pop(m);
+      printf("[ OUT: ] %d\n", a); // TODO: abstract
       break;
     case INST_HALT:
       exit(0);
       break;
+    case INST_CMPE:
+      push(m, pop(m) == pop(m));
+      break;
+    case INST_CMPL:
+      a = pop(m);
+      b = pop(m);
+      push(m, b < a);
+      break;
+    case INST_CMPG:
+      a = pop(m);
+      b = pop(m);
+      push(m, b > a);
+      break;
+    case INST_CJMP:
+      if (pop(m) == 1) {
+        ip = m->instructions[ip].val - 1;
+      } else
+        continue;
+      break;
+    case INST_JMP:
+      ip = m->instructions[ip].val - 1;
+      break;
     }
   };
+#if (LOG_LEVEL >= 1)
   print_stack(m);
+#endif
   return 0;
 }
