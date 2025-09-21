@@ -4,5 +4,6 @@ a stack-based VM in C. i'm trying to leave coherent comments throughout, so it s
 for compile instructions look through the makefile. you may want to change your compiler
 
 goals:
-    [ ] implement a good enough instructions set
-    [ ] write an assembler
+    - [ ] implement a good enough instructions set
+    - [ ] write an assembler
+    - [ ] maybe switch over to c++?

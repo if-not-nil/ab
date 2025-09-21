@@ -37,7 +37,7 @@ typedef enum {
   //
   // special
   INST_HALT = 0xFF, // halt
-  INST_NONE = -1,   // for parser errors
+  INST_NONE = -1,   // for lexer errors
 } INST_TYPE;
 
 typedef struct {

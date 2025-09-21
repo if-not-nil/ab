@@ -3,6 +3,7 @@
 #include "common.h"
 #include "instructions.h"
 #include "lexer.h"
+#include "parser.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -228,7 +229,7 @@ int main(int argc, char *argv[]) {
   if (argc > 0) {
     if (argv) { // temp to silence the compiler
     };
-    lexer();
+    parser(lexer());
     return 0;
   }
   Machine *machine = malloc(sizeof(Machine));
