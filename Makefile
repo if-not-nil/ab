@@ -1,8 +1,11 @@
 SRC_FILES = src/main.c
-CC_FLAGS = -Wall -Wextra -Wno-missing-field-initializers -g -std=c11
+CC_FLAGS = -Wall -Wextra -Wno-missing-field-initializers -g -std=c23
 
 all:
 	cc ${SRC_FILES} ${CC_FLAGS} -o ab
 
 run:
 	make all && ./ab
+
+lex:
+	make all && ./ab lex

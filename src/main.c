@@ -1,6 +1,8 @@
 // yo remember to move things to separate header files when the length reaches
 // 500 lines
+#include "common.h"
 #include "instructions.h"
+#include "lexer.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +21,7 @@ typedef struct {
 
 void rt_err(const char *msg) {
   fprintf(stderr, "RUNTIME ERROR: %s\n", msg);
-  exit(1);
+  die(msg);
 }
 
 void print_stack(Machine *machine) {
@@ -155,6 +157,7 @@ void execute_loop(Machine *m) {
       if (rhs == 0)
         rt_err("cannot divide by 0");
       push(m, lhs / rhs);
+      break;
     }
     case INST_SWAP:
       a = pop(m);
@@ -214,23 +217,33 @@ void execute_loop(Machine *m) {
     case INST_INDUP:
       idup(m, m->instructions[ip].val);
       break;
+    case INST_NONE:
+      die("tried executing INST_NONE");
+      break;
     }
   };
 }
 
-int main(void) {
-  Machine *m = malloc(sizeof(Machine));
+int main(int argc, char *argv[]) {
+  if (argc > 0) {
+    if (argv) { // temp to silence the compiler
+    };
+    lexer();
+    return 0;
+  }
+  Machine *machine = malloc(sizeof(Machine));
 #ifdef INDEV
-  m->instructions = program;
-  m->program_size = PROGRAM_SIZE;
-  prog_write_to_file(m, "./prog.ab");
+  machine->instructions = program;
+  machine->program_size = PROGRAM_SIZE;
+  prog_write_to_file(machine, "./prog.ab");
 #else
   prog_read_from_file(m, "./prog.ab");
 #endif /* ifdef INDEV */
 
-  execute_loop(m);
+  execute_loop(machine);
+
 #if (LOG_LEVEL >= 1)
-  print_stack(m);
+  print_stack(machine);
 #endif
   return 0;
 }

@@ -1,19 +1,25 @@
-// if defined, the program is the one at the bottom of this file. else loaded from prog.ab
+// if defined, the program is the one at the bottom of this file. else loaded
+// from prog.ab
 #define INDEV
+#ifndef INSTRUCTIONS_H
+#define INSTRUCTIONS_H
+
 typedef enum {
-  INST_NOP = 0x00,
-  INST_PUSH, // push a number onto the stack
-  INST_JMP,  // jump to an instruction from the arg
-  INST_SWAP, // pop a then b, push b then a
-  INST_INSWAP,
+  INST_NOP = 0x00, // nope
+  INST_PUSH,       // push a number (x) onto the stack
+  INST_JMP,        // jump to an instruction at x
+  INST_SWAP,       // pop a then b, push b then a
+  //
+  // instructions with an index operator (x)
+  INST_INSWAP,     // swap the top of the stack with a value at x
+  INST_INDUP,      // push a value which is at x to the top of the stack
   //
   // pop, one number, then...
   INST_PRINT, // print it
-  INST_JMPZ,  // if it's 1, jump to an instruction from the arg
-  INST_JPMNZ, // if it's not 1, jump to an instruction from the arg
-  INST_POP,   //
+  INST_JMPZ,  // if it's 1, jump to an instruction at x
+  INST_JPMNZ, // if it's not 1, jump to an instruction at x
+  INST_POP,   // guess
   INST_DUP,   // push it twice
-  INST_INDUP,
   //
   // arithmetic: pop two numbers, compute, then push one
   INST_ADD, // a + b
@@ -30,11 +36,12 @@ typedef enum {
   INST_CMPLE, // a > b
   //
   // special
-  INST_HALT = 0xFF, // special halt (NYI)
-} INST_SET;
+  INST_HALT = 0xFF, // halt
+  INST_NONE = -1,   // for parser errors
+} INST_TYPE;
 
 typedef struct {
-  INST_SET type;
+  INST_TYPE type;
   int val;
 } INST;
 
@@ -69,3 +76,4 @@ INST program[] = {DEF_INST_PUSH(1), DEF_INST_PUSH(2), DEF_INST_PUSH(3),
 #define PROGRAM_SIZE (sizeof(program) / sizeof(program[0]))
 
 #endif // INDEV
+#endif // INSTRUCTIONS_H
