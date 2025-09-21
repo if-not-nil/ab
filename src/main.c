@@ -1,5 +1,6 @@
 // yo remember to move things to separate header files when the length reaches
 // 500 lines
+#include "instructions.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,60 +9,13 @@
 // levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
 #define LOG_LEVEL 2
 
-typedef enum {
-  INST_PUSH,  // push a number onto the stack
-  INST_JMP,   // jump to an instruction from the arg
-  INST_CJMP,  // pop last number. if it's 1, jump to an instruction from the arg
-  INST_POP,   // pop a number off the top
-  INST_DUP,   // pop the last number then push it twice
-  INST_ADD,   // pop two numbers then push a + b
-  INST_SUB,   // pop two numbers then push a - b
-  INST_MUL,   // pop two numbers then push a * b
-  INST_DIV,   // pop two numbers then push a / b
-  INST_SWAP,  // pop a then b, push b then a
-  INST_CMPE,  // pop two numbers then push a == b (1 or 0)
-  INST_CMPL,  // pop two numbers then push a < b (1 or 0)
-  INST_CMPG,  // pop two numbers then push a > b (1 or 0)
-  INST_PRINT, // pop the last number and print it
-  INST_HALT,  // special halt (NYI)
-} INST_SET;
-
-typedef struct {
-  INST_SET type;
-  int val;
-} INST;
-
 #define MAX_STACK_SIZE 1024
-
 typedef struct {
   int stack[MAX_STACK_SIZE];
-  int stack_size;
+  int stack_size; // not sure if it should be int or size_t
   size_t program_size;
   INST *instructions;
 } Machine;
-
-#define DEF_INST_PUSH(x) {.type = INST_PUSH, .val = x}
-#define DEF_INST_CJMP(x) {.type = INST_CJMP, .val = x}
-#define DEF_INST_JMP(x) {.type = INST_JMP, .val = x}
-#define DEF_INST_PRINT {.type = INST_PRINT}
-#define DEF_INST_SWAP {.type = INST_SWAP}
-#define DEF_INST_CMPE {.type = INST_CMPE}
-#define DEF_INST_CMPL {.type = INST_CMPL}
-#define DEF_INST_CMPG {.type = INST_CMPG}
-#define DEF_INST_POP {.type = INST_POP}
-#define DEF_INST_ADD {.type = INST_ADD}
-#define DEF_INST_SUB {.type = INST_SUB}
-#define DEF_INST_MUL {.type = INST_MUL}
-#define DEF_INST_DUP {.type = INST_DUP}
-#define DEF_INST_DIV {.type = INST_DIV}
-#define DEF_INST_HALT {.type = INST_HALT}
-
-INST program[] = {
-    DEF_INST_PUSH(1), DEF_INST_JMP(4),  DEF_INST_PUSH(2),
-    DEF_INST_ADD,     DEF_INST_PUSH(7), DEF_INST_PRINT,
-};
-
-#define PROGRAM_SIZE (sizeof(program) / sizeof(program[0]))
 
 void rt_err(const char *msg) {
   fprintf(stderr, "RUNTIME ERROR: %s\n", msg);
@@ -112,7 +66,7 @@ void push(Machine *machine, int value) {
   printf("LOG: push@(%d): %d\n", machine->stack_size, value);
 #endif
   if (machine->stack_size >= MAX_STACK_SIZE)
-    rt_err("stack overflow!");
+    rt_err("stack overflow! (push)");
 
   machine->stack[machine->stack_size] = value;
   machine->stack_size++;
@@ -123,25 +77,50 @@ int pop(Machine *machine) {
   printf("LOG: pop\n");
 #endif
   if (machine->stack_size <= 0)
-    rt_err("stack underflow!");
+    rt_err("stack underflow! (pop)");
 
   machine->stack_size--;
   return machine->stack[machine->stack_size];
 }
 
-int main(void) {
+int peek(Machine *machine, int depth) {
+  if (depth > machine->stack_size)
+    rt_err("tried to peek into the void (peek)");
+  return machine->stack[machine->stack_size - depth - 1];
+}
+
+void idup(Machine *machine, int index) {
+  if (index > machine->stack_size && index < 0) {
+    rt_err("index out of range (swap)");
+    exit(1);
+  };
+  push(machine, machine->stack[index]);
+}
+
+void iswap(Machine *machine, int index) {
+  if (index > machine->stack_size && index < 0) {
+    rt_err("index out of range (swap)");
+    exit(1);
+  };
+  int tmp = machine->stack[index];
+  machine->stack[index] = pop(machine);
+  push(machine, tmp);
+}
+
+//
+// running the thing
+//
+
+void execute_loop(Machine *m) {
   int a, b;
-  Machine *m = malloc(sizeof(Machine));
-  // prog_read_from_file(m, "./prog.ab");
-  m->instructions = program;
-  m->program_size = PROGRAM_SIZE;
-  prog_write_to_file(m, "./prog.ab");
   for (size_t ip = 0; ip < m->program_size; ip++) {
-    // ip for instruction pointer
 #if (LOG_LEVEL >= 2)
     printf("#%u\n", m->instructions[ip].type);
 #endif
     switch (m->instructions[ip].type) {
+    case INST_NOP:
+      continue;
+      break;
     case INST_PUSH:
       push(m, m->instructions[ip].val);
       break;
@@ -165,9 +144,10 @@ int main(void) {
       push(m, b - a);
       break;
     case INST_MUL: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs * rhs);
+      a = pop(m);
+      b = pop(m);
+      push(m, a * b);
+      break;
     }
     case INST_DIV: {
       int rhs = pop(m);
@@ -190,29 +170,65 @@ int main(void) {
       exit(0);
       break;
     case INST_CMPE:
-      push(m, pop(m) == pop(m));
+      push(m, peek(m, 0) == peek(m, 1));
       break;
     case INST_CMPL:
-      a = pop(m);
-      b = pop(m);
-      push(m, b < a);
+      push(m, peek(m, 0) < peek(m, 1));
       break;
     case INST_CMPG:
-      a = pop(m);
-      b = pop(m);
-      push(m, b > a);
+      push(m, peek(m, 0) > peek(m, 1));
       break;
-    case INST_CJMP:
-      if (pop(m) == 1) {
+    case INST_JMPZ:
+      if (pop(m) == 0) {
         ip = m->instructions[ip].val - 1;
       } else
         continue;
       break;
+    case INST_JPMNZ:
+      if (pop(m) != 0) {
+        ip = m->instructions[ip].val - 1;
+      } else
+        continue;
+      break;
+      ;
+    case INST_CMPGE:
+      push(m, peek(m, 0) >= peek(m, 1));
+      break;
+    case INST_CMPLE:
+      push(m, peek(m, 0) <= peek(m, 1));
+      break;
     case INST_JMP:
       ip = m->instructions[ip].val - 1;
       break;
+    case INST_MOD: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      if (rhs == 0)
+        rt_err("cannot divide by 0");
+      push(m, lhs / rhs);
+      break;
+    }
+    case INST_INSWAP:
+      iswap(m, m->instructions[ip].val);
+      break;
+    case INST_INDUP:
+      idup(m, m->instructions[ip].val);
+      break;
     }
   };
+}
+
+int main(void) {
+  Machine *m = malloc(sizeof(Machine));
+#ifdef INDEV
+  m->instructions = program;
+  m->program_size = PROGRAM_SIZE;
+  prog_write_to_file(m, "./prog.ab");
+#else
+  prog_read_from_file(m, "./prog.ab");
+#endif /* ifdef INDEV */
+
+  execute_loop(m);
 #if (LOG_LEVEL >= 1)
   print_stack(m);
 #endif
