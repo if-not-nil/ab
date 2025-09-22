@@ -5,7 +5,7 @@ all:
 	cc ${SRC_FILES} ${CC_FLAGS} -o ab
 
 run:
-	make all && ./ab
+	make all && ./ab prog.aba
 
 lex:
 	make all && ./ab lex

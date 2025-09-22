@@ -10,7 +10,7 @@
 #include <string.h>
 
 // levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
-#define LOG_LEVEL 1
+#define LOG_LEVEL 0
 
 #define MAX_STACK_SIZE 1024
 typedef struct {
@@ -166,9 +166,13 @@ void execute_loop(Machine *m) {
       push(m, a);
       push(m, b);
       break;
+    case INST_PRINTC:
+      a = pop(m);
+      printf("%c", a); // TODO: abstract
+      break;
     case INST_PRINT:
       a = pop(m);
-      printf("[ OUT: ] %d\n", a); // TODO: abstract
+      printf("%d", a); // TODO: abstract
       break;
     case INST_HALT:
       exit(0);
@@ -228,10 +232,9 @@ void execute_loop(Machine *m) {
 int main(int argc, char *argv[]) {
   Machine *machine = malloc(sizeof(Machine));
   if (argc > 0) {
-    if (argv) { // temp to silence the compiler
-    };
+    // printf("%s\n", argv[1]);
     int prog_size;
-    machine->instructions = parser(lexer(), &prog_size);
+    machine->instructions = parser(lexer(argv[1]), &prog_size);
     machine->program_size = prog_size;
   }
   // #ifdef INDEV

@@ -13,6 +13,7 @@
 typedef enum {
   TOK_NONE = 0xD0,
   TOK_INT = 0xD1,
+  TOK_CHAR = 0xD2,
   TOK_NOP = 0x00,  // no operation
   TOK_PUSH = 0x01, // push a number (x) onto the stack
   TOK_JMP = 0x02,  // jump to an instruction at x
@@ -23,11 +24,12 @@ typedef enum {
   TOK_INDUP = 0x05,  // push a value which is at x to the top of the stack
   //
   // pop, one number, then...
-  TOK_PRINT = 0x06, // print it
-  TOK_JMPZ = 0x07,  // if it's 1, jump to an instruction at x
-  TOK_JPMNZ = 0x08, // if it's not 1, jump to an instruction at x
-  TOK_POP = 0x09,   // guess
-  TOK_DUP = 0x0A,   // push it twice
+  TOK_PRINT = 0x50,  // print it
+  TOK_PRINTC = 0x51, // print it
+  TOK_JMPZ = 0x07,   // if it's 1, jump to an instruction at x
+  TOK_JPMNZ = 0x08,  // if it's not 1, jump to an instruction at x
+  TOK_POP = 0x09,    // guess
+  TOK_DUP = 0x0A,    // push it twice
   //
   // arithmetic: pop two numbers, compute, then push one
   TOK_ADD = 0x10, // a + b
@@ -119,6 +121,8 @@ TokenType keyword_check_builtin(char *name) {
     return TOK_INSWAP;
   else if (strcmp(name, "indup") == 0)
     return TOK_INDUP;
+  else if (strcmp(name, "printc") == 0)
+    return TOK_PRINTC;
   else if (strcmp(name, "print") == 0)
     return TOK_PRINT;
   else if (strcmp(name, "jmpz") == 0)
@@ -154,7 +158,9 @@ TokenType keyword_check_builtin(char *name) {
   else if (strcmp(name, "none") == 0)
     return TOK_NONE;
 
-  return -1;
+  if (strlen(name) == 1)
+    return TOK_CHAR;
+  return TOK_NONE;
 }
 
 Token lexer_generate_int(char *cur, int *idx, int line, int character) {
@@ -194,9 +200,9 @@ void lexer_print_stack(Lexer *machine) {
   }
   printf("\n===\n");
 }
-Lexer *lexer(void) {
+Lexer *lexer(char *file_path) {
   int len = 0;
-  char *cur = open_file("./prog.aba", &len);
+  char *cur = open_file(file_path, &len);
   int idx = 0;
 
   Lexer *lexer = malloc(sizeof(Lexer));

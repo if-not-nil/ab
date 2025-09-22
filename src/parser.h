@@ -2,6 +2,7 @@
 #define INCLUDE_SRC_PARSER_H_
 
 #include "lexer.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -40,6 +41,8 @@ INST *parser(Lexer *lexer, int *program_size) {
     if (cur->value.type >= 0xD0 && cur->value.type < 0xE0) {
       // the 0xDx range is for token specific stuff
       insts[inst_p - 1].val = atoi(cur->value.text);
+      if (isalpha(*cur->value.text))
+        insts[inst_p - 1].val = (char)*cur->value.text;
       continue;
     }
     if (cur->value.type != TOK_NOP) {

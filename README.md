@@ -5,9 +5,11 @@ for compile instructions look through the makefile. you may want to change your 
 
 goals:
     - [ ] implement a good enough instructions set
-    - [x] write an assembler
-    - [ ] maybe switch over to c++?
-    - [ ] labels in asm
+    - [ ] separate the vm and the assembler
+    - ASM:
+        - [ ] make one
+        - [ ] labels
+        - [ ] maybe switch over to c++?
 
 the assembly looks like
 

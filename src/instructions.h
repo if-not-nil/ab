@@ -20,11 +20,12 @@ typedef enum {
   INST_INDUP = 0x05,  // push a value which is at x to the top of the stack
   //
   // pop, one number, then...
-  INST_PRINT = 0x06, // print it
-  INST_JMPZ = 0x07,  // if it's 1, jump to an instruction at x
-  INST_JPMNZ = 0x08, // if it's not 1, jump to an instruction at x
-  INST_POP = 0x09,   // guess
-  INST_DUP = 0x0A,   // push it twice
+  INST_PRINT = 0x50,  // print it
+  INST_PRINTC = 0x51, // print it as %c
+  INST_JMPZ = 0x07,   // if it's 1, jump to an instruction at x
+  INST_JPMNZ = 0x08,  // if it's not 1, jump to an instruction at x
+  INST_POP = 0x09,    // guess
+  INST_DUP = 0x0A,    // push it twice
   //
   // arithmetic: pop two numbers, compute, then push one
   INST_ADD = 0x10, // a + b
@@ -58,6 +59,7 @@ typedef struct {
 #define DEF_INST_INSWAP(x) {.type = INST_INSWAP, .val = x}
 #define DEF_INST_INDUP(x) {.type = INST_INDUP, .val = x}
 #define DEF_INST_PRINT {.type = INST_PRINT}
+#define DEF_INST_PRINTC {.type = INST_PRINTC}
 #define DEF_INST_SWAP {.type = INST_SWAP}
 #define DEF_INST_CMPE {.type = INST_CMPE}
 #define DEF_INST_CMPGE {.type = INST_CMPGE}

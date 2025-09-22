@@ -1,8 +1,28 @@
-push 5
-pop
-push 6
-print
-push 7
-push 8
-swap
+push 'H'
+printc
+push 'e'
+printc
+push 'l'
 dup
+printc
+printc
+push 'o'
+printc
+push 44
+printc
+push 32
+printc
+push 'w'
+printc
+push 'o'
+printc
+push 'r'
+printc
+push 'l'
+printc
+push 'd'
+printc
+push 33
+printc
+push 10
+printc
