@@ -8,37 +8,44 @@
 #include <stdlib.h>
 #include <string.h>
 
+// 0xDx for non-instructions
+//
 typedef enum {
-  TOK_NOP = 0x00,
-  TOK_PUSH,
-  TOK_JMP,
-  TOK_SWAP,
-  TOK_INSWAP,
-  TOK_INDUP,
-  TOK_PRINT,
-  TOK_JMPZ,
-  TOK_JPMNZ,
-  TOK_POP,
-  TOK_DUP,
+  TOK_NONE = 0xD0,
+  TOK_INT = 0xD1,
+  TOK_NOP = 0x00,  // no operation
+  TOK_PUSH = 0x01, // push a number (x) onto the stack
+  TOK_JMP = 0x02,  // jump to an instruction at x
+  TOK_SWAP = 0x03, // pop a then b, push b then a
+  //
+  // instructions with an index operator (x)
+  TOK_INSWAP = 0x04, // swap the top of the stack with a value at x
+  TOK_INDUP = 0x05,  // push a value which is at x to the top of the stack
+  //
+  // pop, one number, then...
+  TOK_PRINT = 0x06, // print it
+  TOK_JMPZ = 0x07,  // if it's 1, jump to an instruction at x
+  TOK_JPMNZ = 0x08, // if it's not 1, jump to an instruction at x
+  TOK_POP = 0x09,   // guess
+  TOK_DUP = 0x0A,   // push it twice
   //
   // arithmetic: pop two numbers, compute, then push one
-  TOK_ADD, // a + b
-  TOK_MOD, // a % b
-  TOK_SUB, // a - b
-  TOK_MUL, // a * b
-  TOK_DIV, // a / b
+  TOK_ADD = 0x10, // a + b
+  TOK_MOD = 0x11, // a % b
+  TOK_SUB = 0x12, // a - b
+  TOK_MUL = 0x13, // a * b
+  TOK_DIV = 0x14, // a / b
   //
   // comparison: pop two numbers, compare, then push a number (1 or 0)
-  TOK_CMPE,  // a == b
-  TOK_CMPL,  // a < b
-  TOK_CMPG,  // a > b
-  TOK_CMPGE, // a > b
-  TOK_CMPLE, // a > b
+  TOK_CMPE = 0x40,  // a == b
+  TOK_CMPL = 0x41,  // a < b
+  TOK_CMPG = 0x42,  // a > b
+  TOK_CMPGE = 0x43, // a > b
+  TOK_CMPLE = 0x44, // a > b
   //
   // special
   TOK_HALT = 0xFF, // halt
-  TOK_NONE,
-  TOK_INT,
+
 } TokenType;
 
 typedef struct {
@@ -209,17 +216,23 @@ Lexer *lexer(void) {
       Token tok = lexer_generate_keyword(cur, &idx, pos_line, pos_char);
       idx--; // walk back a bit so that we hit newline
       lexer_push(lexer, tok);
+#if LOG_LEVEL > 1
       printf("tok\t (%s)\t @ %d:%d\n", tok.text, tok.line, tok.character);
+#endif
     } else if (isdigit(c)) { // idk how it differs from isnumber()
       Token tok = lexer_generate_int(cur, &idx, pos_line, pos_char);
       idx--;
       lexer_push(lexer, tok);
+#if LOG_LEVEL > 1
       printf("num\t (%s)\t @ %d:%d\n", tok.text, tok.line, tok.character);
+#endif
     }
     pos_char++;
     idx++;
   }
+#if LOG_LEVEL > 1
   lexer_print_stack(lexer);
+#endif
   return lexer;
 }
 

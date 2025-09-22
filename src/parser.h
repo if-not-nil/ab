@@ -23,7 +23,8 @@ void pl_append(ParseList *head, Token val) {
   head->next = new_node;
 }
 
-ParseList *parser(Lexer *lexer) {
+#define MAX_PROGRAM_SIZE 1024
+INST *parser(Lexer *lexer, int *program_size) {
   ParseList *root = malloc(sizeof(ParseList));
   chkdie(!root, "malloc failed for ParseList root");
   root->next = NULL;
@@ -32,11 +33,31 @@ ParseList *parser(Lexer *lexer) {
     pl_append(root, lexer->token_stack[i]);
   }
 
+  INST *insts = (INST *)malloc(sizeof(INST) * MAX_PROGRAM_SIZE);
+  int inst_p = 0;
+
   for (ParseList *cur = root->next; cur != NULL; cur = cur->next) {
-    printf("%d\n", cur->value.type);
+    if (cur->value.type >= 0xD0 && cur->value.type < 0xE0) {
+      // the 0xDx range is for token specific stuff
+      insts[inst_p - 1].val = atoi(cur->value.text);
+      continue;
+    }
+    if (cur->value.type != TOK_NOP) {
+      INST inst = {.type =
+                       (int)(cur->value.type)}; // TODO: fix implicit conversion
+      insts[inst_p] = inst;
+    }
+    inst_p++;
   }
 
-  return root;
+#if LOG_LEVEL > 1
+  printf("=== parser stack\n");
+  for (int i = 0; i < inst_p; i++) {
+    printf("%u: %d\n", insts[i].type, insts[i].val);
+  }
+#endif
+  *program_size = inst_p;
+  return insts;
 }
 
 #endif // INCLUDE_SRC_PARSER_H_

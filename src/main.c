@@ -10,7 +10,7 @@
 #include <string.h>
 
 // levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
-#define LOG_LEVEL 2
+#define LOG_LEVEL 1
 
 #define MAX_STACK_SIZE 1024
 typedef struct {
@@ -226,20 +226,21 @@ void execute_loop(Machine *m) {
 }
 
 int main(int argc, char *argv[]) {
+  Machine *machine = malloc(sizeof(Machine));
   if (argc > 0) {
     if (argv) { // temp to silence the compiler
     };
-    parser(lexer());
-    return 0;
+    int prog_size;
+    machine->instructions = parser(lexer(), &prog_size);
+    machine->program_size = prog_size;
   }
-  Machine *machine = malloc(sizeof(Machine));
-#ifdef INDEV
-  machine->instructions = program;
-  machine->program_size = PROGRAM_SIZE;
-  prog_write_to_file(machine, "./prog.ab");
-#else
-  prog_read_from_file(m, "./prog.ab");
-#endif /* ifdef INDEV */
+  // #ifdef INDEV
+  //   machine->instructions = program;
+  //   machine->program_size = PROGRAM_SIZE;
+  //   prog_write_to_file(machine, "./prog.ab");
+  // #else
+  //   prog_read_from_file(m, "./prog.ab");
+  // #endif /* ifdef INDEV */
 
   execute_loop(machine);
 
