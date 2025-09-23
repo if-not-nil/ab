@@ -41,7 +41,7 @@ Token token_init(int line, int character, char *text, TokenType type) {
 void token_print(Token tok) {
   if (&tok + 0) // silence the compiler
     ;
-  LOG1("TOK %s: %s\n", token_to_string(tok.type), tok.text);
+  LOG1("TOK %s: %s", token_to_string(tok.type), tok.text);
 }
 
 char *open_file(char *path, int *len) {
@@ -86,7 +86,11 @@ Token lexer_generate_keyword(char *cur, int *idx, int line, int character) {
   }
   keyword[keyword_len] = '\0';
   TokenType type = keyword_to_token(keyword);
-  chkdie(((int)type == TOK_NONE), "couldnt lex token");
+  // chkdie(((int)type == TOK_NONE), "couldnt lex token");
+  if (type == TOK_IDENT) {
+    if (cur[*idx] == ':')
+      type = TOK_LABEL_DEF;
+  }
   Token token = token_init(line, character, keyword, type);
   return token;
 }
@@ -120,12 +124,12 @@ Lexer *lexer(char *file_path) {
       Token tok = lexer_generate_keyword(cur, &idx, pos_line, pos_char);
       idx--; // walk back a bit so that we hit newline
       lexer_push(lexer, tok);
-      LOG1("tok\t (%s)\t @ %d:%d\n", tok.text, tok.line, tok.character);
+      LOG1("tok\t (%s)\t @ %d:%d", tok.text, tok.line, tok.character);
     } else if (isdigit(c)) { // idk how it differs from isnumber()
       Token tok = lexer_generate_int(cur, &idx, pos_line, pos_char);
       idx--;
       lexer_push(lexer, tok);
-      LOG1("num\t (%s)\t @ %d:%d\n", tok.text, tok.line, tok.character);
+      LOG1("num\t (%s)\t @ %d:%d", tok.text, tok.line, tok.character);
     }
     pos_char++;
     idx++;

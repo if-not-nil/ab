@@ -20,10 +20,6 @@ typedef struct {
   INST *instructions;
 } Machine;
 
-void rt_err(const char *msg) {
-  fprintf(stderr, "RUNTIME ERROR: %s\n", msg);
-  die(msg);
-}
 
 void print_stack(Machine *machine) {
   printf("\n=== stack size %d:\n", machine->stack_size);
@@ -65,18 +61,18 @@ void prog_read_from_file(Machine *machine, char *path) {
 
 // operations
 void push(Machine *machine, int val) {
-  LOG2("LOG: push@(%d): %d\n", machine->stack_size, val);
+  LOG2("push@(%d): %d", machine->stack_size, val);
   if (machine->stack_size >= MAX_STACK_SIZE)
-    rt_err("stack overflow! (push)");
+    RT_ERR("stack overflow! (push)");
 
   machine->stack[machine->stack_size] = val;
   machine->stack_size++;
 }
 
 int pop(Machine *machine) {
-  LOG2("LOG: pop\n");
+  LOG2("pop");
   if (machine->stack_size <= 0)
-    rt_err("stack underflow! (pop)");
+    RT_ERR("stack underflow! (pop)");
 
   machine->stack_size--;
   return machine->stack[machine->stack_size];
@@ -84,13 +80,13 @@ int pop(Machine *machine) {
 
 int peek(Machine *machine, int depth) {
   if (depth > machine->stack_size)
-    rt_err("tried to peek into the void (peek)");
+    RT_ERR("tried to peek into the void (peek)");
   return machine->stack[machine->stack_size - depth - 1];
 }
 
 void idup(Machine *machine, int index) {
   if (index > machine->stack_size && index < 0) {
-    rt_err("index out of range (swap)");
+    RT_ERR("index out of range (swap)");
     exit(1);
   };
   push(machine, machine->stack[index]);
@@ -98,7 +94,7 @@ void idup(Machine *machine, int index) {
 
 void iswap(Machine *machine, int index) {
   if (index > machine->stack_size && index < 0) {
-    rt_err("index out of range (swap)");
+    RT_ERR("index out of range (swap)");
     exit(1);
   };
   int tmp = machine->stack[index];
@@ -113,8 +109,8 @@ void iswap(Machine *machine, int index) {
 void execute_loop(Machine *m) {
   int a, b;
   for (size_t ip = 0; ip < m->program_size; ip++) {
-    LOG2("#%u\n", m->instructions[ip].type);
-    LOG2("INST %s, %d\n", inst_to_string(m->instructions[ip].type),
+    LOG2("#%u", m->instructions[ip].type);
+    LOG2("INST %s, %d", inst_to_string(m->instructions[ip].type),
          m->instructions[ip].val);
     switch (m->instructions[ip].type) {
     case INST_NOP:
@@ -152,7 +148,7 @@ void execute_loop(Machine *m) {
       int rhs = pop(m);
       int lhs = pop(m);
       if (rhs == 0)
-        rt_err("cannot divide by 0");
+        RT_ERR("cannot divide by 0");
       push(m, lhs / rhs);
       break;
     }
@@ -208,7 +204,7 @@ void execute_loop(Machine *m) {
       int rhs = pop(m);
       int lhs = pop(m);
       if (rhs == 0)
-        rt_err("cannot divide by 0");
+        RT_ERR("cannot divide by 0");
       push(m, lhs / rhs);
       break;
     }
@@ -249,7 +245,7 @@ int main(int argc, char *argv[]) {
     machine->instructions = parser(lexer(argv[1]), &prog_size);
     machine->program_size = prog_size;
   }
-  LOG2("did lex parse\n");
+  LOG2("did lex parse");
   // #ifdef INDEV
   //   machine->instructions = program;
   //   machine->program_size = PROGRAM_SIZE;
@@ -258,9 +254,10 @@ int main(int argc, char *argv[]) {
   //   prog_read_from_file(m, "./prog.ab");
   // #endif /* ifdef INDEV */
 
+  prog_write_to_file(machine, "./prog.ab");
   execute_loop(machine);
 
-  LOG2("executed\n");
+  LOG2("executed");
 #if (LOG_LEVEL >= 1)
   print_stack(machine);
 #endif

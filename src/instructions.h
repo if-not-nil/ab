@@ -10,6 +10,7 @@
 //   0x1x for arithmetic
 //   0x4x for comparisons
 #define INSTRUCTION_LIST                                                       \
+  X(NONE, -1, "none")                                                          \
   X(NOP, 0x00, "nop")                                                          \
   X(PUSH, 0x01, "push")                                                        \
   X(JMP, 0x02, "jmp")                                                          \
@@ -38,25 +39,26 @@
   X(AND, 0x47, "and")                                                          \
   X(HALT, 0xFF, "halt")
 
+#define TOKEN_LIST                                                             \
+  X(INT, 0xD1, "int")                                                          \
+  X(CHAR, 0xD2, "char")                                                        \
+  X(IDENT, 0xD3, "ident")                                                      \
+  X(EOF, 0xD4, "eof")                                                          \
+  X(ERROR, 0xF0, "error")                                                      \
+  X(LABEL_DEF, 0xF1, "label_def")
+
 // instructions enum
 typedef enum {
 #define X(name, opcode, _) INST_##name = (opcode), // x-macros saved my life
   INSTRUCTION_LIST
 #undef X
-      INST_NONE = -1
 } InstType;
 
 // lexer enum, instructions + special tokens
 typedef enum {
 #define X(name, _, __) TOK_##name,
-  INSTRUCTION_LIST
+  INSTRUCTION_LIST TOKEN_LIST
 #undef X
-      TOK_NONE = 0xD0,
-  TOK_INT = 0xD1,
-  TOK_CHAR = 0xD2,
-  TOK_IDENT = 0xD3,
-  TOK_EOF = 0xD4,
-  TOK_ERROR
 } TokenType;
 
 typedef struct {
@@ -78,11 +80,13 @@ static inline const char *inst_to_string(InstType inst) {
 
 static inline InstType token_to_inst(TokenType tok) {
   switch (tok) {
-#define X(sym, opcode, str) case TOK_##sym: return INST_##sym;
+#define X(sym, opcode, str)                                                    \
+  case TOK_##sym:                                                              \
+    return INST_##sym;
     INSTRUCTION_LIST
 #undef X
-    default:
-      return INST_NONE;
+  default:
+    return INST_NONE;
   }
 }
 
@@ -92,17 +96,8 @@ static inline const char *token_to_string(TokenType tok) {
   case TOK_##name:                                                             \
     return (str);
     INSTRUCTION_LIST
+    TOKEN_LIST
 #undef X
-  case TOK_INT:
-    return "int";
-  case TOK_CHAR:
-    return "char";
-  case TOK_IDENT:
-    return "ident";
-  case TOK_EOF:
-    return "eof";
-  case TOK_ERROR:
-    return "error";
   default:
     return "unknown";
   }
@@ -113,6 +108,7 @@ static inline TokenType keyword_to_token(const char *word) {
   if (strcmp(word, (str)) == 0)                                                \
     return TOK_##sym;
   INSTRUCTION_LIST
+  TOKEN_LIST
 #undef X
   return TOK_IDENT;
 }
