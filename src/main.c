@@ -20,7 +20,6 @@ typedef struct {
   INST *instructions;
 } Machine;
 
-
 void print_stack(Machine *machine) {
   printf("\n=== stack size %d:\n", machine->stack_size);
   for (int i = 0; i <= machine->stack_size - 1; i++) {
@@ -81,6 +80,7 @@ int pop(Machine *machine) {
 int peek(Machine *machine, int depth) {
   if (depth > machine->stack_size)
     RT_ERR("tried to peek into the void (peek)");
+  LOG3("peek returned %d", machine->stack[machine->stack_size - depth - 1]);
   return machine->stack[machine->stack_size - depth - 1];
 }
 
@@ -109,7 +109,10 @@ void iswap(Machine *machine, int index) {
 void execute_loop(Machine *m) {
   int a, b;
   for (size_t ip = 0; ip < m->program_size; ip++) {
-    LOG2("#%u", m->instructions[ip].type);
+#if STEP_EXEC
+    getc(stdin);
+    printf("next\n");
+#endif
     LOG2("INST %s, %d", inst_to_string(m->instructions[ip].type),
          m->instructions[ip].val);
     switch (m->instructions[ip].type) {
@@ -129,9 +132,7 @@ void execute_loop(Machine *m) {
       break;
     }
     case INST_DUP:
-      a = pop(m); // cuz u shouldnt peek into the stack
-      push(m, a);
-      push(m, a);
+      push(m, peek(m, 0));
       break;
     case INST_SUB:
       a = pop(m);
@@ -169,34 +170,48 @@ void execute_loop(Machine *m) {
     case INST_HALT:
       exit(0);
       break;
-    case INST_CMPE:
-      push(m, peek(m, 0) == peek(m, 1));
+    case INST_CMPE: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs == rhs);
       break;
-    case INST_CMPL:
-      push(m, peek(m, 0) < peek(m, 1));
+    }
+    case INST_CMPL: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs < rhs);
       break;
-    case INST_CMPG:
-      push(m, peek(m, 0) > peek(m, 1));
+    }
+    case INST_CMPG: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs > rhs);
       break;
+    }
     case INST_JMPZ:
       if (pop(m) == 0) {
         ip = m->instructions[ip].val - 1;
       } else
         continue;
       break;
-    case INST_JPMNZ:
+    case INST_JMPNZ:
       if (pop(m) != 0) {
         ip = m->instructions[ip].val - 1;
       } else
         continue;
       break;
-      ;
-    case INST_CMPGE:
-      push(m, peek(m, 0) >= peek(m, 1));
+    case INST_CMPGE: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs >= rhs);
       break;
-    case INST_CMPLE:
-      push(m, peek(m, 0) <= peek(m, 1));
+    }
+    case INST_CMPLE: {
+      int rhs = pop(m);
+      int lhs = pop(m);
+      push(m, lhs <= rhs);
       break;
+    }
     case INST_JMP:
       ip = m->instructions[ip].val - 1;
       break;
@@ -234,6 +249,9 @@ void execute_loop(Machine *m) {
       push(m, peek(m, 0) && peek(m, 1));
       break;
     }
+#if LOG_LEVEL > 2
+    print_stack(m);
+#endif
   };
 }
 
@@ -245,7 +263,7 @@ int main(int argc, char *argv[]) {
     machine->instructions = parser(lexer(argv[1]), &prog_size);
     machine->program_size = prog_size;
   }
-  LOG2("did lex parse");
+  LOG2("executing now");
   // #ifdef INDEV
   //   machine->instructions = program;
   //   machine->program_size = PROGRAM_SIZE;

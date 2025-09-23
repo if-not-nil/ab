@@ -1,13 +1,17 @@
-push 1
-
+push 97
 LOOP:
-  push 2
-  print
-jmp LOOP
-  push 2
-  push 2
-  mul
-  mul
-  mul
-  xor
-  print
+
+dup
+printc
+
+push 1
+add
+
+dup
+push 123
+cmpge
+
+jmpz LOOP
+
+push 10
+printc

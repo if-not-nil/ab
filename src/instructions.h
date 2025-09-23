@@ -20,7 +20,7 @@
   X(PRINT, 0x50, "print")                                                      \
   X(PRINTC, 0x51, "printc")                                                    \
   X(JMPZ, 0x07, "jmpz")                                                        \
-  X(JPMNZ, 0x08, "jpmnz")                                                      \
+  X(JMPNZ, 0x08, "jmpnz")                                                      \
   X(POP, 0x09, "pop")                                                          \
   X(DUP, 0x0A, "dup")                                                          \
   X(ADD, 0x10, "add")                                                          \
@@ -44,8 +44,8 @@
   X(CHAR, 0xD2, "char")                                                        \
   X(IDENT, 0xD3, "ident")                                                      \
   X(EOF, 0xD4, "eof")                                                          \
-  X(ERROR, 0xF0, "error")                                                      \
-  X(LABEL_DEF, 0xF1, "label_def")
+  X(ERROR, 0xD5, "error")                                                      \
+  X(LABEL_DEF, 0xD6, "label_def")
 
 // instructions enum
 typedef enum {

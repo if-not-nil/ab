@@ -4,7 +4,9 @@
 #include <stdlib.h>
 
 // levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
-#define LOG_LEVEL 2
+#define LOG_LEVEL 0
+// whether to wait for char input each time u execute
+#define STEP_EXEC 0
 
 #define die(fmt, ...)                                                          \
   do {                                                                         \
@@ -18,9 +20,8 @@
 
 #define RT_ERR(fmt, ...)                                                       \
   do {                                                                         \
-    printf("[RUNTIME ERROR] " fmt "\n", ##__VA_ARGS__);                        \
+    die("[RUNTIME ERROR] " fmt "\n", ##__VA_ARGS__);                           \
   } while (0)
-
 
 #if LOG_LEVEL >= 1
 #define LOG1(fmt, ...)                                                         \

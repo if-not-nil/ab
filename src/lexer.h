@@ -39,7 +39,7 @@ Token token_init(int line, int character, char *text, TokenType type) {
 }
 
 void token_print(Token tok) {
-  if (&tok + 0) // silence the compiler
+  if (&tok + 0) // to silence the compiler
     ;
   LOG1("TOK %s: %s", token_to_string(tok.type), tok.text);
 }
@@ -77,7 +77,7 @@ Token lexer_generate_int(char *cur, int *idx, int line, int character) {
 }
 
 Token lexer_generate_keyword(char *cur, int *idx, int line, int character) {
-  char *keyword = malloc(sizeof(char) * 8);
+  char *keyword = malloc(sizeof(char) * 32);
   size_t keyword_len = 0;
   while (isalpha(cur[*idx])) {
     keyword[keyword_len] = cur[*idx];
@@ -87,9 +87,9 @@ Token lexer_generate_keyword(char *cur, int *idx, int line, int character) {
   keyword[keyword_len] = '\0';
   TokenType type = keyword_to_token(keyword);
   // chkdie(((int)type == TOK_NONE), "couldnt lex token");
-  if (type == TOK_IDENT) {
-    if (cur[*idx] == ':')
-      type = TOK_LABEL_DEF;
+  if (type == TOK_IDENT && cur[*idx] == ':') {
+    type = TOK_LABEL_DEF;
+    *idx += 1;
   }
   Token token = token_init(line, character, keyword, type);
   return token;
