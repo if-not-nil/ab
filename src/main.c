@@ -4,6 +4,8 @@
 #include "instructions.h"
 #include "lexer.h"
 #include "parser.h"
+#include <ctype.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -224,6 +226,22 @@ void execute_loop(Machine *m) {
       break;
     case INST_NONE:
       die("tried executing INST_NONE");
+      break;
+    case INST_POW:
+      int rhs = pop(m);
+      int lhs = pop(m);
+      if (rhs == 0)
+        push(m, 1);
+      push(m, pow(lhs, rhs));
+      break;
+    case INST_OR:
+      push(m, peek(m, 0) || peek(m, 1)); 
+      break;
+    case INST_XOR:
+      push(m, peek(m, 0) ^ peek(m, 1));
+      break;
+    case INST_AND:
+      push(m, peek(m, 0) && peek(m, 1));
       break;
     }
   };

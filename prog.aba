@@ -1,28 +1,4 @@
-push 'H'
-printc
-push 'e'
-printc
-push 'l'
-dup
-printc
-printc
-push 'o'
-printc
-push 44
-printc
-push 32
-printc
-push 'w'
-printc
-push 'o'
-printc
-push 'r'
-printc
-push 'l'
-printc
-push 'd'
-printc
-push 33
-printc
-push 10
-printc
+push 1
+push 1
+xor
+print

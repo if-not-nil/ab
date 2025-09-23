@@ -33,6 +33,7 @@ typedef enum {
   INST_SUB = 0x12, // a - b
   INST_MUL = 0x13, // a * b
   INST_DIV = 0x14, // a / b
+  INST_POW = 0x15, // a ^ b
   //
   // comparison: pop two numbers, compare, then push a number (1 or 0)
   INST_CMPE = 0x40,  // a == b
@@ -40,6 +41,9 @@ typedef enum {
   INST_CMPG = 0x42,  // a > b
   INST_CMPGE = 0x43, // a > b
   INST_CMPLE = 0x44, // a > b
+  INST_OR = 0x45,    // a || b
+  INST_XOR = 0x46,   // a ^ b
+  INST_AND = 0x47,   // a && b
   //
   // special
   INST_HALT = 0xFF, // halt
@@ -73,6 +77,7 @@ typedef struct {
 #define DEF_INST_MUL {.type = INST_MUL}
 #define DEF_INST_DUP {.type = INST_DUP}
 #define DEF_INST_DIV {.type = INST_DIV}
+#define DEF_INST_POW {.type = INST_DIV}
 #define DEF_INST_HALT {.type = INST_HALT}
 
 #ifdef INDEV

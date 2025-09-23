@@ -3,9 +3,7 @@
 #include "common.h"
 #include "instructions.h"
 #include <ctype.h>
-#include <stdatomic.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 // 0xDx for non-instructions
@@ -37,6 +35,7 @@ typedef enum {
   TOK_SUB = 0x12, // a - b
   TOK_MUL = 0x13, // a * b
   TOK_DIV = 0x14, // a / b
+  TOK_POW = 0x15,
   //
   // comparison: pop two numbers, compare, then push a number (1 or 0)
   TOK_CMPE = 0x40,  // a == b
@@ -44,6 +43,9 @@ typedef enum {
   TOK_CMPG = 0x42,  // a > b
   TOK_CMPGE = 0x43, // a > b
   TOK_CMPLE = 0x44, // a > b
+  TOK_OR = 0x45,    // a || b
+  TOK_XOR = 0x46,   // a ^ b
+  TOK_AND = 0x47,   // a && b
   //
   // special
   TOK_HALT = 0xFF, // halt
@@ -145,6 +147,8 @@ TokenType keyword_check_builtin(char *name) {
     return TOK_DIV;
   else if (strcmp(name, "cmpe") == 0)
     return TOK_CMPE;
+  else if (strcmp(name, "pow") == 0)
+    return TOK_POW;
   else if (strcmp(name, "cmpl") == 0)
     return TOK_CMPL;
   else if (strcmp(name, "cmpg") == 0)
@@ -157,6 +161,12 @@ TokenType keyword_check_builtin(char *name) {
     return TOK_HALT;
   else if (strcmp(name, "none") == 0)
     return TOK_NONE;
+  else if (strcmp(name, "and") == 0)
+    return TOK_AND;
+  else if (strcmp(name, "or") == 0)
+    return TOK_OR;
+  else if (strcmp(name, "xor") == 0)
+    return TOK_XOR;
 
   if (strlen(name) == 1)
     return TOK_CHAR;

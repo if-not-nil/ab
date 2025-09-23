@@ -34,7 +34,7 @@ INST *parser(Lexer *lexer, int *program_size) {
     pl_append(root, lexer->token_stack[i]);
   }
 
-  INST *insts = (INST *)malloc(sizeof(INST) * MAX_PROGRAM_SIZE);
+  INST *insts = (INST *)malloc(sizeof(INST) * MAX_PROGRAM_SIZE); // 16 384
   int inst_p = 0;
 
   for (ParseList *cur = root->next; cur != NULL; cur = cur->next) {
