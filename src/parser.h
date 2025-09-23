@@ -2,12 +2,9 @@
 #define INCLUDE_SRC_PARSER_H_
 
 #include "lexer.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 typedef struct ParseList {
-  Token value;
+  Token val;
   struct ParseList *next;
 } ParseList;
 
@@ -18,10 +15,17 @@ void pl_append(ParseList *head, Token val) {
   ParseList *new_node = malloc(sizeof(ParseList));
   chkdie(!new_node, "malloc failed for ParseList");
 
-  new_node->value = val;
+  new_node->val = val;
   new_node->next = NULL;
 
   head->next = new_node;
+}
+
+void pl_print(ParseList *head) {
+  while (head != NULL) {
+    token_print(head->val);
+    head = head->next;
+  }
 }
 
 #define MAX_PROGRAM_SIZE 1024
@@ -31,23 +35,24 @@ INST *parser(Lexer *lexer, int *program_size) {
   root->next = NULL;
 
   for (int i = 0; i < lexer->stack_size; i++) {
-    pl_append(root, lexer->token_stack[i]);
+    pl_append(root, lexer->stack[i]);
   }
+  pl_print(root);
 
-  INST *insts = (INST *)malloc(sizeof(INST) * MAX_PROGRAM_SIZE); // 16 384
+  INST *insts = (INST *)malloc(sizeof(INST) * MAX_PROGRAM_SIZE);
   int inst_p = 0;
 
   for (ParseList *cur = root->next; cur != NULL; cur = cur->next) {
-    if (cur->value.type >= 0xD0 && cur->value.type < 0xE0) {
-      // the 0xDx range is for token specific stuff
-      insts[inst_p - 1].val = atoi(cur->value.text);
-      if (isalpha(*cur->value.text))
-        insts[inst_p - 1].val = (char)*cur->value.text;
+    TokenType type = cur->val.type;
+    // the 0xDx range is for token specific stuff
+    if (type >= 0xD0 && type < 0xE0) {
+      insts[inst_p - 1].val = atoi(cur->val.text);
+      if (isalpha(*cur->val.text))
+        insts[inst_p - 1].val = (char)*cur->val.text;
       continue;
     }
-    if (cur->value.type != TOK_NOP) {
-      INST inst = {.type =
-                       (int)(cur->value.type)}; // TODO: fix implicit conversion
+    if (type != TOK_NOP) {
+      INST inst = {.type = token_to_inst(type)};
       insts[inst_p] = inst;
     }
     inst_p++;

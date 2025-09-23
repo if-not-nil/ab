@@ -1,9 +1,5 @@
 // yo remember to move things to separate header files when the length reaches
 // 500 lines
-#include "common.h"
-#include "instructions.h"
-#include "lexer.h"
-#include "parser.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
@@ -11,8 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-// levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
-#define LOG_LEVEL 0
+#include "common.h"
+#include "instructions.h"
+#include "lexer.h"
+#include "parser.h"
 
 #define MAX_STACK_SIZE 1024
 typedef struct {
@@ -41,8 +39,8 @@ void prog_write_to_file(Machine *machine, char *path) {
     fprintf(stderr, "\ncoudlnt write file!!\n");
     exit(1);
   }
-  fwrite(machine->instructions, sizeof(machine->instructions[0]), PROGRAM_SIZE,
-         file);
+  fwrite(machine->instructions, sizeof(machine->instructions[0]),
+         machine->program_size, file);
   fclose(file);
 }
 
@@ -66,21 +64,17 @@ void prog_read_from_file(Machine *machine, char *path) {
 }
 
 // operations
-void push(Machine *machine, int value) {
-#if (LOG_LEVEL >= 2)
-  printf("LOG: push@(%d): %d\n", machine->stack_size, value);
-#endif
+void push(Machine *machine, int val) {
+  LOG2("LOG: push@(%d): %d\n", machine->stack_size, val);
   if (machine->stack_size >= MAX_STACK_SIZE)
     rt_err("stack overflow! (push)");
 
-  machine->stack[machine->stack_size] = value;
+  machine->stack[machine->stack_size] = val;
   machine->stack_size++;
 }
 
 int pop(Machine *machine) {
-#if (LOG_LEVEL >= 2)
-  printf("LOG: pop\n");
-#endif
+  LOG2("LOG: pop\n");
   if (machine->stack_size <= 0)
     rt_err("stack underflow! (pop)");
 
@@ -119,9 +113,9 @@ void iswap(Machine *machine, int index) {
 void execute_loop(Machine *m) {
   int a, b;
   for (size_t ip = 0; ip < m->program_size; ip++) {
-#if (LOG_LEVEL >= 2)
-    printf("#%u\n", m->instructions[ip].type);
-#endif
+    LOG2("#%u\n", m->instructions[ip].type);
+    LOG2("INST %s, %d\n", inst_to_string(m->instructions[ip].type),
+         m->instructions[ip].val);
     switch (m->instructions[ip].type) {
     case INST_NOP:
       continue;
@@ -235,7 +229,7 @@ void execute_loop(Machine *m) {
       push(m, pow(lhs, rhs));
       break;
     case INST_OR:
-      push(m, peek(m, 0) || peek(m, 1)); 
+      push(m, peek(m, 0) || peek(m, 1));
       break;
     case INST_XOR:
       push(m, peek(m, 0) ^ peek(m, 1));
@@ -255,6 +249,7 @@ int main(int argc, char *argv[]) {
     machine->instructions = parser(lexer(argv[1]), &prog_size);
     machine->program_size = prog_size;
   }
+  LOG2("did lex parse\n");
   // #ifdef INDEV
   //   machine->instructions = program;
   //   machine->program_size = PROGRAM_SIZE;
@@ -265,6 +260,7 @@ int main(int argc, char *argv[]) {
 
   execute_loop(machine);
 
+  LOG2("executed\n");
 #if (LOG_LEVEL >= 1)
   print_stack(machine);
 #endif

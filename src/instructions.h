@@ -1,3 +1,4 @@
+#include <string.h>
 // if defined, the program is the one at the bottom of this file. else loaded
 // from prog.ab
 #define INDEV
@@ -8,84 +9,112 @@
 //   0x0x for elementary
 //   0x1x for arithmetic
 //   0x4x for comparisons
+#define INSTRUCTION_LIST                                                       \
+  X(NOP, 0x00, "nop")                                                          \
+  X(PUSH, 0x01, "push")                                                        \
+  X(JMP, 0x02, "jmp")                                                          \
+  X(SWAP, 0x03, "swap")                                                        \
+  X(INSWAP, 0x04, "inswap")                                                    \
+  X(INDUP, 0x05, "indup")                                                      \
+  X(PRINT, 0x50, "print")                                                      \
+  X(PRINTC, 0x51, "printc")                                                    \
+  X(JMPZ, 0x07, "jmpz")                                                        \
+  X(JPMNZ, 0x08, "jpmnz")                                                      \
+  X(POP, 0x09, "pop")                                                          \
+  X(DUP, 0x0A, "dup")                                                          \
+  X(ADD, 0x10, "add")                                                          \
+  X(MOD, 0x11, "mod")                                                          \
+  X(SUB, 0x12, "sub")                                                          \
+  X(MUL, 0x13, "mul")                                                          \
+  X(DIV, 0x14, "div")                                                          \
+  X(POW, 0x15, "pow")                                                          \
+  X(CMPE, 0x40, "cmpe")                                                        \
+  X(CMPL, 0x41, "cmpl")                                                        \
+  X(CMPG, 0x42, "cmpg")                                                        \
+  X(CMPGE, 0x43, "cmpge")                                                      \
+  X(CMPLE, 0x44, "cmple")                                                      \
+  X(OR, 0x45, "or")                                                            \
+  X(XOR, 0x46, "xor")                                                          \
+  X(AND, 0x47, "and")                                                          \
+  X(HALT, 0xFF, "halt")
 
+// instructions enum
 typedef enum {
-  INST_NOP = 0x00,  // no operation
-  INST_PUSH = 0x01, // push a number (x) onto the stack
-  INST_JMP = 0x02,  // jump to an instruction at x
-  INST_SWAP = 0x03, // pop a then b, push b then a
-  //
-  // instructions with an index operator (x)
-  INST_INSWAP = 0x04, // swap the top of the stack with a value at x
-  INST_INDUP = 0x05,  // push a value which is at x to the top of the stack
-  //
-  // pop, one number, then...
-  INST_PRINT = 0x50,  // print it
-  INST_PRINTC = 0x51, // print it as %c
-  INST_JMPZ = 0x07,   // if it's 1, jump to an instruction at x
-  INST_JPMNZ = 0x08,  // if it's not 1, jump to an instruction at x
-  INST_POP = 0x09,    // guess
-  INST_DUP = 0x0A,    // push it twice
-  //
-  // arithmetic: pop two numbers, compute, then push one
-  INST_ADD = 0x10, // a + b
-  INST_MOD = 0x11, // a % b
-  INST_SUB = 0x12, // a - b
-  INST_MUL = 0x13, // a * b
-  INST_DIV = 0x14, // a / b
-  INST_POW = 0x15, // a ^ b
-  //
-  // comparison: pop two numbers, compare, then push a number (1 or 0)
-  INST_CMPE = 0x40,  // a == b
-  INST_CMPL = 0x41,  // a < b
-  INST_CMPG = 0x42,  // a > b
-  INST_CMPGE = 0x43, // a > b
-  INST_CMPLE = 0x44, // a > b
-  INST_OR = 0x45,    // a || b
-  INST_XOR = 0x46,   // a ^ b
-  INST_AND = 0x47,   // a && b
-  //
-  // special
-  INST_HALT = 0xFF, // halt
-  INST_NONE = -1,   // for lexer errors
-} INST_TYPE;
+#define X(name, opcode, _) INST_##name = (opcode), // x-macros saved my life
+  INSTRUCTION_LIST
+#undef X
+      INST_NONE = -1
+} InstType;
+
+// lexer enum, instructions + special tokens
+typedef enum {
+#define X(name, _, __) TOK_##name,
+  INSTRUCTION_LIST
+#undef X
+      TOK_NONE = 0xD0,
+  TOK_INT = 0xD1,
+  TOK_CHAR = 0xD2,
+  TOK_IDENT = 0xD3,
+  TOK_EOF = 0xD4,
+  TOK_ERROR
+} TokenType;
 
 typedef struct {
-  INST_TYPE type;
+  InstType type;
   int val;
 } INST;
 
-#define DEF_INST_NOP {.type = INST_NOP}
-#define DEF_INST_PUSH(x) {.type = INST_PUSH, .val = x}
-#define DEF_INST_JMP(x) {.type = INST_JMP, .val = x}
-#define DEF_INST_JMPNZ(x) {.type = INST_JMPNZ, .val = x}
-#define DEF_INST_JMPZ(x) {.type = INST_JMPZ, .val = x}
-#define DEF_INST_INSWAP(x) {.type = INST_INSWAP, .val = x}
-#define DEF_INST_INDUP(x) {.type = INST_INDUP, .val = x}
-#define DEF_INST_PRINT {.type = INST_PRINT}
-#define DEF_INST_PRINTC {.type = INST_PRINTC}
-#define DEF_INST_SWAP {.type = INST_SWAP}
-#define DEF_INST_CMPE {.type = INST_CMPE}
-#define DEF_INST_CMPGE {.type = INST_CMPGE}
-#define DEF_INST_CMPLE {.type = INST_CMPLE}
-#define DEF_INST_CMPL {.type = INST_CMPL}
-#define DEF_INST_CMPG {.type = INST_CMPG}
-#define DEF_INST_POP {.type = INST_POP}
-#define DEF_INST_ADD {.type = INST_ADD}
-#define DEF_INST_MOD {.type = INST_MOD}
-#define DEF_INST_SUB {.type = INST_SUB}
-#define DEF_INST_MUL {.type = INST_MUL}
-#define DEF_INST_DUP {.type = INST_DUP}
-#define DEF_INST_DIV {.type = INST_DIV}
-#define DEF_INST_POW {.type = INST_DIV}
-#define DEF_INST_HALT {.type = INST_HALT}
+static inline const char *inst_to_string(InstType inst) {
+  switch (inst) {
+#define X(name, opcode, str)                                                   \
+  case INST_##name:                                                            \
+    return (str);
+    INSTRUCTION_LIST
+#undef X
+  default:
+    return "unknown";
+  }
+}
 
-#ifdef INDEV
+static inline InstType token_to_inst(TokenType tok) {
+  switch (tok) {
+#define X(sym, opcode, str) case TOK_##sym: return INST_##sym;
+    INSTRUCTION_LIST
+#undef X
+    default:
+      return INST_NONE;
+  }
+}
 
-INST program[] = {DEF_INST_PUSH(1), DEF_INST_PUSH(2), DEF_INST_PUSH(3),
-                  DEF_INST_PUSH(4), DEF_INST_PUSH(5), DEF_INST_INSWAP(2)};
+static inline const char *token_to_string(TokenType tok) {
+  switch (tok) {
+#define X(name, opcode, str)                                                   \
+  case TOK_##name:                                                             \
+    return (str);
+    INSTRUCTION_LIST
+#undef X
+  case TOK_INT:
+    return "int";
+  case TOK_CHAR:
+    return "char";
+  case TOK_IDENT:
+    return "ident";
+  case TOK_EOF:
+    return "eof";
+  case TOK_ERROR:
+    return "error";
+  default:
+    return "unknown";
+  }
+}
 
-#define PROGRAM_SIZE (sizeof(program) / sizeof(program[0]))
+static inline TokenType keyword_to_token(const char *word) {
+#define X(sym, opcode, str)                                                    \
+  if (strcmp(word, (str)) == 0)                                                \
+    return TOK_##sym;
+  INSTRUCTION_LIST
+#undef X
+  return TOK_IDENT;
+}
 
-#endif // INDEV
-#endif // INSTRUCTIONS_H
+#endif
