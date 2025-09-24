@@ -9,6 +9,7 @@
 
 struct Memory {
   std::vector<WORD> data;
+  // look into the `explicit` keyword. it makes it so that you can do Memory memory(2048); but not Memory memory = 2048;
   Memory(size_t size)
       : data(size, 0) {}; // same as doing `data = std::vector<WORD>(size, 0);`!
                           // insane what this language can do
