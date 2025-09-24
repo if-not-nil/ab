@@ -285,12 +285,13 @@ void execute_loop(Machine *m) {
 }
 
 int main(int argc, char *argv[]) {
-  Machine *machine = (Machine*)malloc(sizeof(Machine));
+  Machine *machine = (Machine *)malloc(sizeof(Machine));
   machine->memory = mem_init(2048);
   if (argc > 0) {
     // printf("%s\n", argv[1]);
     int prog_size;
-    machine->instructions = parser(lexer(argv[1]), &prog_size);
+    Lexer lex(argv[1]);
+    machine->instructions = parser(lex, &prog_size);
     machine->program_size = prog_size;
   }
   LOG2("executing now");

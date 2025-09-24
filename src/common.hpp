@@ -1,5 +1,4 @@
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -61,4 +60,3 @@
   } while (0)
 #endif
 
-#endif
