@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 // levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
-#define LOG_LEVEL 0
+#define LOG_LEVEL 3
 // whether to wait for char input each time u execute
 #define STEP_EXEC 0
 
@@ -17,6 +17,11 @@
 #define chkdie(x, err)                                                         \
   if (x)                                                                       \
   die(err)
+
+#define TODO(fmt, ...)                                                         \
+  do {                                                                         \
+    fprintf(stderr, "\033[103m[HIT TODO] " fmt "\033[0m\n", ##__VA_ARGS__);    \
+  } while (0)
 
 #define RT_ERR(fmt, ...)                                                       \
   do {                                                                         \

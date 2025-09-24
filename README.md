@@ -17,3 +17,9 @@ milestones:\
     - [ ] variables\
     - [ ] functions\
     - [ ] jit language (end goal)
+
+instruction todo:
+    - [ ] LOAD x
+    - [ ] STORE x
+    - [ ] CALL x
+    - [ ] STORE x

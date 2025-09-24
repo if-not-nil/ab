@@ -23,12 +23,15 @@
   X(JMPNZ, 0x08, "jmpnz")                                                      \
   X(POP, 0x09, "pop")                                                          \
   X(DUP, 0x0A, "dup")                                                          \
+  X(OVER, 0x0B, "over")                                                        \
+  X(ROT, 0x0C, "rot")                                                          \
   X(ADD, 0x10, "add")                                                          \
   X(MOD, 0x11, "mod")                                                          \
   X(SUB, 0x12, "sub")                                                          \
   X(MUL, 0x13, "mul")                                                          \
   X(DIV, 0x14, "div")                                                          \
   X(POW, 0x15, "pow")                                                          \
+  X(NEG, 0x16, "neg")                                                          \
   X(CMPE, 0x40, "cmpe")                                                        \
   X(CMPL, 0x41, "cmpl")                                                        \
   X(CMPG, 0x42, "cmpg")                                                        \
@@ -37,6 +40,9 @@
   X(OR, 0x45, "or")                                                            \
   X(XOR, 0x46, "xor")                                                          \
   X(AND, 0x47, "and")                                                          \
+  X(NOT, 0x48, "not")                                                          \
+  X(LOAD, 0xF0, "load")                                                        \
+  X(STORE, 0xF1, "store")                                                      \
   X(HALT, 0xFF, "halt")
 
 #define TOKEN_LIST                                                             \
@@ -45,7 +51,8 @@
   X(IDENT, 0xD3, "ident")                                                      \
   X(EOF, 0xD4, "eof")                                                          \
   X(ERROR, 0xD5, "error")                                                      \
-  X(LABEL_DEF, 0xD6, "label_def")
+  X(LABEL_DEF, 0xD6, "label_def")                                              \
+  X(PUSH_STR, 0xD7, "push_str")
 
 // instructions enum
 typedef enum {
@@ -56,7 +63,7 @@ typedef enum {
 
 // lexer enum, instructions + special tokens
 typedef enum {
-#define X(name, _, __) TOK_##name,
+#define X(name, opcode, _) TOK_##name = (opcode),
   INSTRUCTION_LIST TOKEN_LIST
 #undef X
 } TokenType;

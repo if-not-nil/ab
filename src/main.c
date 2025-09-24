@@ -10,13 +10,16 @@
 #include "common.h"
 #include "instructions.h"
 #include "lexer.h"
+#include "memory.h"
 #include "parser.h"
 
 #define MAX_STACK_SIZE 1024
+
 typedef struct {
   int stack[MAX_STACK_SIZE];
   int stack_size; // not sure if it should be int or size_t
   size_t program_size;
+  Memory memory;
   INST *instructions;
 } Machine;
 
@@ -248,6 +251,30 @@ void execute_loop(Machine *m) {
     case INST_AND:
       push(m, peek(m, 0) && peek(m, 1));
       break;
+    case INST_OVER:
+      push(m, peek(m, 1));
+      break;
+    case INST_ROT:
+      int c = pop(m);
+      int b = pop(m);
+      int a = pop(m);
+      push(m, b);
+      push(m, c);
+      push(m, a);
+      break;
+    case INST_NEG:
+      push(m, -(pop(m)));
+      break;
+    case INST_NOT: {
+      push(m, ~(pop(m)));
+      break;
+    }
+    case INST_LOAD:
+      push(m, val_load_int(&m->memory, m->instructions[ip].val));
+      break;
+    case INST_STORE:
+      val_store_int(&m->memory, pop(m), m->instructions[ip].val);
+      break;
     }
 #if LOG_LEVEL > 2
     print_stack(m);
@@ -257,6 +284,7 @@ void execute_loop(Machine *m) {
 
 int main(int argc, char *argv[]) {
   Machine *machine = malloc(sizeof(Machine));
+  machine->memory = mem_init(2048);
   if (argc > 0) {
     // printf("%s\n", argv[1]);
     int prog_size;
