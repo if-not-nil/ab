@@ -2,8 +2,6 @@
 
 #include "common.hpp"
 #include "instructions.hpp"
-#include <cassert>
-#include <cctype>
 #include <cstddef>
 #include <fstream>
 #include <sstream>
@@ -11,34 +9,41 @@
 #include <vector>
 
 struct Token {
-  Token(int line, int character, char *text, TokenType type)
+  Token(int line, int character, std::string text, TokenType type)
       : type(type), text(text), line(line), character(character) {};
-  void print() { LOG1("TOK %s: %s", token_to_string(type), text); };
+  std::string to_str() {
+    return "TOK{type=" + std::string(token_to_string(type)) + ",text=" + text +
+           ",line=" + std::to_string(line) +
+           ",character=" + std::to_string(character) + "}\n";
+  };
   TokenType type;
-  char *text;
+  std::string text;
   int line;
   int character;
 };
 
+// file contents as a string
 inline std::string read_file(const std::string &path) {
   std::ifstream file(path, std::ios::in | std::ios::binary);
   if (!file.is_open())
-    throw std::runtime_error("Could not open file: " + path);
+    throw std::runtime_error("could not open file: " + path);
 
   std::ostringstream ss;
   ss << file.rdbuf();
-  return ss.str(); // file contents as a string
+  return ss.str();
 }
 
 #define MAX_TOKEN_STACK_SIZE 512
 struct Lexer {
-  std::vector<Token> stack;
-  std::ifstream file;
+private:
   std::string contents;
+  std::ifstream file;
+
+public:
+  std::vector<Token> stack;
   int pos_line = 1, pos_char = 1;
   Lexer(std::string file_path) {
     contents = read_file(file_path);
-    assert(file.is_open());
     lex();
   }
   Token pop() {
@@ -114,4 +119,3 @@ struct Lexer {
     return tok;
   }
 };
-

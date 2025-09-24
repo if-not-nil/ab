@@ -1,141 +1,86 @@
-#ifndef INCLUDE_SRC_PARSER_H_
-#define INCLUDE_SRC_PARSER_H_
+#pragma once
 
-#include "common.hpp"
 #include "lexer.hpp"
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-typedef struct ParseList {
-  Token val;
-  struct ParseList *next;
-} ParseList;
-
-void pl_append(ParseList *head, Token val) {
-  while (head->next != NULL)
-    head = head->next;
-
-  ParseList *new_node = new ParseList;
-  chkdie(!new_node, "malloc failed for ParseList");
-
-  new_node->val = val;
-  new_node->next = NULL;
-
-  head->next = new_node;
-}
-
-void pl_print(ParseList *head) {
-  while (head != NULL) {
-    token_print(head->val);
-    head = head->next;
-  }
-}
-
-typedef struct {
-  char *name;
-  int addr;
-} Label;
-
-typedef struct {
-  char *name;
-  INST instructions[];
-} Macro;
+#include <algorithm>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #define MAX_PROGRAM_SIZE 1024
-// TODO: make the parselist an array and the label array a linked list
-INST *parser(Lexer *lexer, int *program_size) {
-  ParseList *root = new ParseList;
-  chkdie(!root, "malloc failed for ParseList root");
-  root->next = NULL;
-  Label *labels = (Label*)malloc(sizeof(Label) * 16);
-  Macro *macros = (Macro*)malloc(sizeof(Macro) * 16);
-  int label_count = 0;
-  int macro_count = 0;
-  int inst_index = 0;
 
-  for (int i = 0; i < lexer->stack_size; i++) {
-    Token tok = lexer->stack[i];
-    if (tok.type == TOK_LABEL_DEF) {
-      labels[label_count].name = strdup(tok.text);
-      labels[label_count].addr = inst_index;
-      LOG2("found label %s, %d", labels[label_count].name,
-           labels[label_count].addr);
-      label_count++;
-    } else if (tok.type == TOK_MACRO_START) {
-      i++;
-      macros[macro_count] = (Macro){.name = lexer->stack[i].text};
-      while(tok.type != TOK_MACRO_END) {
+typedef std::tuple<std::string, int> Label;
+
+struct Macro { // theres no good reason to use a tuple for one and a struct for
+               // another i just just gotta see tuple works
+  std::string name;
+  std::vector<Inst> instructions;
+};
+
+struct Parser {
+  std::vector<Label> labels;
+  std::vector<Inst> instructions;
+  std::vector<Token> tokens;
+  std::vector<Macro> macros;
+
+  Parser(Lexer *lexer) {
+    // first pass for labels
+    int inst_i = 0;
+    for (size_t i = 0; i < lexer->stack.size(); i++) {
+      Token tok = lexer->stack[i];
+
+      if (tok.type == TOK_LABEL_DEF) {
+        labels.push_back({tok.text, inst_i});
+      } else {
+        tokens.push_back(Token(tok.line, tok.character, tok.text, tok.type));
+        if (tok.type < 0xD0 || tok.type > 0xDF)
+          inst_i++;
+      }
+    };
+    print_tokens();
+    // second pass for everything else
+
+    for (size_t i = 0; i < tokens.size(); i++) {
+      Token tok = tokens[i];
+
+      if (tok.type == TOK_INT) {
+        if (i == 0)
+          throw std::runtime_error("a number cant be the first token!");
+        instructions.back().val = std::stoi(tok.text);
+        continue;
+      }
+
+      if (tok.type == TOK_JMP || tok.type == TOK_JMPZ ||
+          tok.type == TOK_JMPNZ) {
+        if (i + 1 >= lexer->stack.size())
+          throw std::runtime_error("no identifier after a jump instruction!");
+
+        Token ident = lexer->stack[i + 2];
+        std::cout << "!" << ident.to_str() << " IDENT!!\n";
+        if (ident.type != TOK_IDENT)
+          throw std::runtime_error("whatever you have after the jump "
+                                   "instruction isnt a valid label\n" +
+                                   ident.to_str());
+
+        auto it = // take c++ away from me bruh
+            std::find_if(labels.begin(), labels.end(), [&](const Label &l) {
+              return std::get<0>(l) == ident.text;
+            });
+
+        if (it == labels.end())
+          throw std::runtime_error("undefined label " + ident.text);
+
+        instructions.push_back(
+            {.type = token_to_inst(tok.type), .val = std::get<1>(*it)});
         i++;
-        tok = lexer->stack[i];
-      }
-    } else {
-      pl_append(root, tok);
-      if (token_to_inst(tok.type) != INST_NONE)
-        inst_index++;
+        continue;
+      } // JMP TOKEN END
+      instructions.push_back({.type = token_to_inst(tok.type)});
+    };
+  }
+  void print_tokens() {
+    for (auto it : tokens) {
+      std::cout << it.to_str();
     }
   }
-
-  pl_print(root);
-
-  INST *insts = (INST *)malloc(sizeof(INST) * MAX_PROGRAM_SIZE);
-  int inst_p = 0;
-
-  for (ParseList *cur = root->next; cur != NULL; cur = cur->next) {
-    TokenType type = cur->val.type;
-    // LOG2("GOT %s\n", token_to_string(type));
-    // the 0xDx range is for token specific stuff
-    if (type == TOK_INT) {
-      chkdie(inst_p == 0, "INT token b4 a preceding one");
-      insts[inst_p - 1].val = atoi(cur->val.text);
-      continue;
-    }
-
-    INST inst = {.type = token_to_inst(type)};
-    if (type == TOK_JMP || type == TOK_JMPZ || type == TOK_JMPNZ) {
-      Token ident = cur->next->val;
-      assert(ident.type == TOK_IDENT);
-      int found = 0;
-
-      for (int i = 0; i < label_count; i++) {
-        if (strcmp(labels[i].name, ident.text) == 0) {
-          inst.val = labels[i].addr;
-          found = 1;
-          break;
-        }
-      }
-
-      if (!found) {
-        die("undefined label! %s", ident.text);
-      }
-      cur = cur->next; // skip the TOK_IDENT
-    }
-    LOG2("ended up with inst %s val %d", inst_to_string(inst.type), inst.val);
-    insts[inst_p] = inst;
-    inst_p++;
-  }
-
-#if LOG_LEVEL > 1
-  printf("=== parser stack\n");
-  for (int i = 0; i < inst_p; i++) {
-    printf("%s: %d\n", inst_to_string(insts[i].type), insts[i].val);
-  }
-  printf("===\n");
-#endif
-
-  *program_size = inst_p;
-  ParseList *cur = root;
-  while (cur) {
-    ParseList *next = cur->next;
-    free(cur);
-    cur = next;
-  }
-  for (int i = 0; i < label_count; i++) {
-    free(labels[i].name); // bc i did strdup
-  }
-  free(labels);
-  return insts;
-}
-
-#endif // INCLUDE_SRC_PARSER_H_
+};

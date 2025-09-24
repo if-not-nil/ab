@@ -1,4 +1,5 @@
 #include <string.h>
+#include <string>
 // if defined, the program is the one at the bottom of this file. else loaded
 // from prog.ab
 #define INDEV
@@ -69,11 +70,6 @@ typedef enum {
 #undef X
 } TokenType;
 
-typedef struct {
-  InstType type;
-  int val;
-} INST;
-
 static inline const char *inst_to_string(InstType inst) {
   switch (inst) {
 #define X(name, opcode, str)                                                   \
@@ -85,6 +81,14 @@ static inline const char *inst_to_string(InstType inst) {
     return "unknown";
   }
 }
+
+struct Inst {
+  InstType type;
+  int val;
+  std::string to_string() {
+    return std::string(inst_to_string(type)) + " (" + std::to_string(val) + ")\n";
+  }
+};
 
 static inline InstType token_to_inst(TokenType tok) {
   switch (tok) {

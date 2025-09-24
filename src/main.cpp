@@ -1,11 +1,10 @@
 // yo remember to move things to separate header files when the length reaches
 // 500 lines
-#include <ctype.h>
 #include <math.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #include "common.hpp"
 #include "instructions.hpp"
@@ -20,7 +19,7 @@ typedef struct {
   int stack_size; // not sure if it should be int or size_t
   size_t program_size;
   Memory memory;
-  INST *instructions;
+  Inst *instructions;
 } Machine;
 
 void print_stack(Machine *machine) {
@@ -48,7 +47,7 @@ void prog_read_from_file(Machine *machine, char *path) {
     fprintf(stderr, "\ncoudlnt read file!!\n");
     exit(1);
   }
-  INST *instructions = (INST *)malloc(sizeof(INST) * MAX_STACK_SIZE);
+  Inst *instructions = (Inst *)malloc(sizeof(Inst) * MAX_STACK_SIZE);
 
   fseek(file, 0, SEEK_END);
   int len = ftell(file);
@@ -285,16 +284,20 @@ void execute_loop(Machine *m) {
 }
 
 int main(int argc, char *argv[]) {
-  Machine *machine = (Machine *)malloc(sizeof(Machine));
-  machine->memory = mem_init(2048);
+  // Machine *machine = (Machine *)malloc(sizeof(Machine));
+  // machine->memory = mem_init(2048);
   if (argc > 0) {
     // printf("%s\n", argv[1]);
-    int prog_size;
-    Lexer lex(argv[1]);
-    machine->instructions = parser(lex, &prog_size);
-    machine->program_size = prog_size;
+    Lexer lex((std::string(argv[1])));
+    Parser parser(&lex);
+    for (Inst in : parser.instructions) {
+      std::cout << in.to_string();
+    }
+    exit(0);
+    // machine->instructions = Parser(lex);
+    // machine->program_size = prog_size;
   }
-  LOG2("executing now");
+  // LOG2("executing now");
   // #ifdef INDEV
   //   machine->instructions = program;
   //   machine->program_size = PROGRAM_SIZE;
@@ -303,12 +306,12 @@ int main(int argc, char *argv[]) {
   //   prog_read_from_file(m, "./prog.ab");
   // #endif /* ifdef INDEV */
 
-  prog_write_to_file(machine, "./prog.ab");
-  execute_loop(machine);
+  // prog_write_to_file(machine, "./prog.ab");
+  // execute_loop(machine);
 
-  LOG2("executed");
-#if (LOG_LEVEL >= 1)
-  print_stack(machine);
-#endif
+  //   LOG2("executed");
+  // #if (LOG_LEVEL >= 1)
+  //   print_stack(machine);
+  // #endif
   return 0;
 }
