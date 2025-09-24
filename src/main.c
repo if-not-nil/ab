@@ -270,10 +270,10 @@ void execute_loop(Machine *m) {
       break;
     }
     case INST_LOAD:
-      push(m, val_load_int(&m->memory, m->instructions[ip].val));
+      push(m, val_load_i32(&m->memory, m->instructions[ip].val));
       break;
     case INST_STORE:
-      val_store_int(&m->memory, pop(m), m->instructions[ip].val);
+      val_store_i32(&m->memory, pop(m), m->instructions[ip].val);
       break;
     }
 #if LOG_LEVEL > 2

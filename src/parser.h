@@ -38,6 +38,11 @@ typedef struct {
   int addr;
 } Label;
 
+typedef struct {
+  char *name;
+  INST instructions[];
+} Macro;
+
 #define MAX_PROGRAM_SIZE 1024
 // TODO: make the parselist an array and the label array a linked list
 INST *parser(Lexer *lexer, int *program_size) {
@@ -45,7 +50,9 @@ INST *parser(Lexer *lexer, int *program_size) {
   chkdie(!root, "malloc failed for ParseList root");
   root->next = NULL;
   Label *labels = malloc(sizeof(Label) * 16);
+  Macro *macros = malloc(sizeof(Macro) * 16);
   int label_count = 0;
+  int macro_count = 0;
   int inst_index = 0;
 
   for (int i = 0; i < lexer->stack_size; i++) {
@@ -56,6 +63,13 @@ INST *parser(Lexer *lexer, int *program_size) {
       LOG2("found label %s, %d", labels[label_count].name,
            labels[label_count].addr);
       label_count++;
+    } else if (tok.type == TOK_MACRO_START) {
+      i++;
+      macros[macro_count] = (Macro){.name = lexer->stack[i].text};
+      while(tok.type != TOK_MACRO_END) {
+        i++;
+        tok = lexer->stack[i];
+      }
     } else {
       pl_append(root, tok);
       if (token_to_inst(tok.type) != INST_NONE)
@@ -77,6 +91,7 @@ INST *parser(Lexer *lexer, int *program_size) {
       insts[inst_p - 1].val = atoi(cur->val.text);
       continue;
     }
+
     INST inst = {.type = token_to_inst(type)};
     if (type == TOK_JMP || type == TOK_JMPZ || type == TOK_JMPNZ) {
       Token ident = cur->next->val;

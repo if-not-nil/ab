@@ -79,7 +79,7 @@ Token lexer_generate_int(char *cur, int *idx, int line, int character) {
 Token lexer_generate_keyword(char *cur, int *idx, int line, int character) {
   char *keyword = malloc(sizeof(char) * 32);
   size_t keyword_len = 0;
-  while (isalpha(cur[*idx]) || cur[*idx] == '_') {
+  while (isalpha(cur[*idx]) || cur[*idx] == '_' || cur[*idx] == '.') {
     keyword[keyword_len] = cur[*idx];
     *idx += 1;
     keyword_len++;
@@ -103,11 +103,6 @@ void lexer_print_stack(Lexer *lexer) {
   printf("\n===\n");
 }
 
-void lexer_push_str(Lexer *lexer, char *cur, int *idx) {
-  TODO("pushing str");
-  exit(0);
-}
-
 Lexer *lexer(char *file_path) {
   int len = 0;
   char *cur = open_file(file_path, &len);
@@ -126,12 +121,15 @@ Lexer *lexer(char *file_path) {
       idx++;
       continue;
     }
-    if (isalpha(c)) {
-      Token tok = lexer_generate_keyword(cur, &idx, pos_line, pos_char);
-      if (tok.type == TOK_PUSH_STR) {
-        lexer_push_str(lexer, cur, &idx);
+    if (c == ';') {
+      while (c != '\n') {
+        c = *(cur + idx);
+        idx++;
         continue;
       }
+    }
+    if (isalpha(c) || c == '_' || c == '.') { // . is meta stuff
+      Token tok = lexer_generate_keyword(cur, &idx, pos_line, pos_char);
       idx--; // walk back a bit so that we hit newline
       lexer_push(lexer, tok);
       LOG1("tok\t (%s)\t @ %d:%d", tok.text, tok.line, tok.character);

@@ -1,10 +1,23 @@
 # a-b vm
 a stack-based VM in C. i'm trying to leave coherent comments throughout, so it should be easy to read
 
-so far, it 
-c++ would probably work better but i wanna learn C
+i've gotten far enough but i've left a lot of bad code in for speed. i'm aware there are memory leaks, and they'll be sorted out in a c++ migration
 
-for compile instructions look through the makefile. you may want to change your compiler
+bytecode example:
+```asm
+push 97
+LOOP:
+dup
+printc
+push 1
+add
+dup
+push 123
+cmpge
+jmpz LOOP
+push 10
+printc
+```
 
 milestones:\
     - [ ] make memory dynamic\

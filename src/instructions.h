@@ -52,7 +52,8 @@
   X(EOF, 0xD4, "eof")                                                          \
   X(ERROR, 0xD5, "error")                                                      \
   X(LABEL_DEF, 0xD6, "label_def")                                              \
-  X(PUSH_STR, 0xD7, "push_str")
+  X(MACRO_START, 0xD7, ".macro")                                               \
+  X(MACRO_END, 0xD9, ".endm")
 
 // instructions enum
 typedef enum {

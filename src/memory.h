@@ -4,10 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MEM_TYPES(X)                                                           \
+  X(int32_t, i32)                                                              \
+  X(uint8_t, u8)                                                               \
+  X(double, f64)
+
 typedef enum {
-  TYPE_I32,
-  TYPE_U8,
-  TYPE_F64,
+#define X(c_type, name) TYPE_##name,
+  MEM_TYPES(X)
+#undef X
 } Type;
 
 typedef union {
@@ -17,40 +22,38 @@ typedef union {
 } Word;
 
 typedef struct {
-  Word word;
-  Type type;
-} Data;
-
-typedef struct {
   void *data;
 } Memory;
 
 Memory mem_init(size_t size) { return (Memory){.data = malloc(size)}; };
 
-void mem_set(Memory *mem, size_t addr, void *data, size_t n) {
-  memmove(mem->data + addr, data, n);
-}
-// TODO: do for all types through X macros
-int mem_get_int(Memory *mem, int addr, int n) {
-  n = n + 0; // to silence the compiler
-  return *(int *)(mem->data + addr);
+void mem_set(Memory *mem, size_t addr, const void *src, size_t n) {
+  memmove((char *)mem->data + addr, src, n);
 }
 
-void val_store_int(Memory *mem, int val, int pos) {
-  mem_set(mem, sizeof(int) * pos, &val, sizeof(int));
+void mem_get(Memory *mem, size_t addr, void *dst, size_t n) {
+  memcpy(dst, (char *)mem->data + addr, n);
 }
 
-int val_load_int(Memory *mem, int pos) {
-  return mem_get_int(mem, sizeof(int) * pos, sizeof(int));
-}
+#define GEN_FUNCS(c_type, enum_name)                                           \
+  void val_store_##enum_name(Memory *mem, c_type val, size_t pos) {            \
+    mem_set(mem, sizeof(c_type) * pos, &val, sizeof(c_type));                  \
+  }                                                                            \
+  c_type val_load_##enum_name(Memory *mem, size_t pos) {                       \
+    c_type tmp;                                                                \
+    mem_get(mem, sizeof(c_type) * pos, &tmp, sizeof(c_type));                  \
+    return tmp;                                                                \
+  }
+MEM_TYPES(GEN_FUNCS)
+#undef GEN_FUNCS
 
 void memory_test(void) {
   Memory memory = mem_init(2048);
-  val_store_int(&memory, 5, 0);
-  printf("%d\n", val_load_int(&memory, 0));
-  val_store_int(&memory, 6, 0);
-  printf("%d\n", val_load_int(&memory, 0));
-  val_store_int(&memory, 7, 1);
-  printf("%d\n", val_load_int(&memory, 1));
+  val_store_i32(&memory, 5, 0);
+  printf("%d\n", val_load_i32(&memory, 0));
+  val_store_i32(&memory, 6, 0);
+  printf("%d\n", val_load_i32(&memory, 0));
+  val_store_i32(&memory, 7, 1);
+  printf("%d\n", val_load_i32(&memory, 1));
   printf("\n");
 }
