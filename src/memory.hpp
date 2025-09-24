@@ -1,59 +1,31 @@
-#include <math.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#define MEM_TYPES(X)                                                           \
-  X(int32_t, i32)                                                              \
-  X(uint8_t, u8)                                                               \
-  X(double, f64)
+#pragma once
 
-typedef enum {
-#define X(c_type, name) TYPE_##name,
-  MEM_TYPES(X)
-#undef X
-} Type;
+#include <cstddef>
+#include <cstring>
+#include <vector>
 
-typedef union {
-  int32_t as_i32;
-  uint8_t as_u8;
-  float_t as_float;
-} Word;
+#define WORD uint8_t
 
-typedef struct {
-  void *data;
-} Memory;
+struct Memory {
+  std::vector<WORD> data;
+  Memory(size_t size)
+      : data(size, 0) {}; // same as doing `data = std::vector<WORD>(size, 0);`!
+                          // insane what this language can do
 
-Memory mem_init(size_t size) { return (Memory){.data = malloc(size)}; };
+  template <typename T> void store(size_t pos, T value) {
+    if (pos + sizeof(T) > data.size())
+      throw std::runtime_error("cant park there sir");
 
-void mem_set(Memory *mem, size_t addr, const void *src, size_t n) {
-  memmove((char *)mem->data + addr, src, n);
-}
-
-void mem_get(Memory *mem, size_t addr, void *dst, size_t n) {
-  memcpy(dst, (char *)mem->data + addr, n);
-}
-
-#define GEN_FUNCS(c_type, enum_name)                                           \
-  void val_store_##enum_name(Memory *mem, c_type val, size_t pos) {            \
-    mem_set(mem, sizeof(c_type) * pos, &val, sizeof(c_type));                  \
-  }                                                                            \
-  c_type val_load_##enum_name(Memory *mem, size_t pos) {                       \
-    c_type tmp;                                                                \
-    mem_get(mem, sizeof(c_type) * pos, &tmp, sizeof(c_type));                  \
-    return tmp;                                                                \
+    std::memcpy(data.data() + pos, &value, sizeof(T));
   }
-MEM_TYPES(GEN_FUNCS)
-#undef GEN_FUNCS
+  // should've seen how horrible this looked before c++
+  template <typename T> T load(size_t pos) {
+    if (pos + sizeof(T) > data.size())
+      throw std::runtime_error("loaded beyond the memory size");
 
-void memory_test(void) {
-  Memory memory = mem_init(2048);
-  val_store_i32(&memory, 5, 0);
-  printf("%d\n", val_load_i32(&memory, 0));
-  val_store_i32(&memory, 6, 0);
-  printf("%d\n", val_load_i32(&memory, 0));
-  val_store_i32(&memory, 7, 1);
-  printf("%d\n", val_load_i32(&memory, 1));
-  printf("\n");
-}
+    T val{};
+    std::memcpy(&val, data.data() + pos, sizeof(T));
+    return val;
+  }
+};

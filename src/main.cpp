@@ -12,15 +12,6 @@
 #include "memory.hpp"
 #include "parser.hpp"
 
-#define MAX_STACK_SIZE 1024
-
-typedef struct {
-  int stack[MAX_STACK_SIZE];
-  int stack_size; // not sure if it should be int or size_t
-  size_t program_size;
-  Memory memory;
-  Inst *instructions;
-} Machine;
 
 void print_stack(Machine *machine) {
   printf("\n=== stack size %d:\n", machine->stack_size);
