@@ -1,8 +1,8 @@
 #ifndef INCLUDE_SRC_PARSER_H_
 #define INCLUDE_SRC_PARSER_H_
 
-#include "common.h"
-#include "lexer.h"
+#include "common.hpp"
+#include "lexer.hpp"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@ void pl_append(ParseList *head, Token val) {
   while (head->next != NULL)
     head = head->next;
 
-  ParseList *new_node = malloc(sizeof(ParseList));
+  ParseList *new_node = new ParseList;
   chkdie(!new_node, "malloc failed for ParseList");
 
   new_node->val = val;
@@ -46,11 +46,11 @@ typedef struct {
 #define MAX_PROGRAM_SIZE 1024
 // TODO: make the parselist an array and the label array a linked list
 INST *parser(Lexer *lexer, int *program_size) {
-  ParseList *root = malloc(sizeof(ParseList));
+  ParseList *root = new ParseList;
   chkdie(!root, "malloc failed for ParseList root");
   root->next = NULL;
-  Label *labels = malloc(sizeof(Label) * 16);
-  Macro *macros = malloc(sizeof(Macro) * 16);
+  Label *labels = (Label*)malloc(sizeof(Label) * 16);
+  Macro *macros = (Macro*)malloc(sizeof(Macro) * 16);
   int label_count = 0;
   int macro_count = 0;
   int inst_index = 0;

@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
-#include "instructions.h"
-#include "lexer.h"
-#include "memory.h"
-#include "parser.h"
+#include "common.hpp"
+#include "instructions.hpp"
+#include "lexer.hpp"
+#include "memory.hpp"
+#include "parser.hpp"
 
 #define MAX_STACK_SIZE 1024
 
@@ -48,7 +48,7 @@ void prog_read_from_file(Machine *machine, char *path) {
     fprintf(stderr, "\ncoudlnt read file!!\n");
     exit(1);
   }
-  INST *instructions = malloc(sizeof(INST) * MAX_STACK_SIZE);
+  INST *instructions = (INST *)malloc(sizeof(INST) * MAX_STACK_SIZE);
 
   fseek(file, 0, SEEK_END);
   int len = ftell(file);
@@ -235,13 +235,14 @@ void execute_loop(Machine *m) {
     case INST_NONE:
       die("tried executing INST_NONE");
       break;
-    case INST_POW:
+    case INST_POW: {
       int rhs = pop(m);
       int lhs = pop(m);
       if (rhs == 0)
         push(m, 1);
       push(m, pow(lhs, rhs));
       break;
+    }
     case INST_OR:
       push(m, peek(m, 0) || peek(m, 1));
       break;
@@ -254,7 +255,7 @@ void execute_loop(Machine *m) {
     case INST_OVER:
       push(m, peek(m, 1));
       break;
-    case INST_ROT:
+    case INST_ROT: {
       int c = pop(m);
       int b = pop(m);
       int a = pop(m);
@@ -262,6 +263,7 @@ void execute_loop(Machine *m) {
       push(m, c);
       push(m, a);
       break;
+    }
     case INST_NEG:
       push(m, -(pop(m)));
       break;
@@ -283,7 +285,7 @@ void execute_loop(Machine *m) {
 }
 
 int main(int argc, char *argv[]) {
-  Machine *machine = malloc(sizeof(Machine));
+  Machine *machine = (Machine*)malloc(sizeof(Machine));
   machine->memory = mem_init(2048);
   if (argc > 0) {
     // printf("%s\n", argv[1]);

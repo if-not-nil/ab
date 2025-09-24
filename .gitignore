@@ -5,6 +5,7 @@ ab.dSYM/
 *.obj
 *.exe
 
+src-cpp-bak/
 *.dSYM/
 *.prof
 *.gcda

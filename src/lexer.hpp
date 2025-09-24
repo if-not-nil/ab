@@ -1,7 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
-#include "common.h"
-#include "instructions.h"
+#include "common.hpp"
+#include "instructions.hpp"
 #include <ctype.h>
 
 typedef struct {
@@ -54,7 +54,7 @@ char *open_file(char *path, int *len) {
   *len = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  cur = malloc(sizeof(char) * *len);
+  cur = (char*)malloc(sizeof(char) * *len);
   chkdie(!cur, "couldnt read from file");
   fread(cur, 1, *len, file);
   fclose(file);
@@ -62,7 +62,7 @@ char *open_file(char *path, int *len) {
 }
 
 Token lexer_generate_int(char *cur, int *idx, int line, int character) {
-  char *keyword = malloc(sizeof(char) * 8);
+  char *keyword = (char*)malloc(sizeof(char) * 8);
   size_t keyword_len = 0;
   while (isdigit(cur[*idx])) {
     keyword[keyword_len] = cur[*idx];
@@ -77,7 +77,7 @@ Token lexer_generate_int(char *cur, int *idx, int line, int character) {
 }
 
 Token lexer_generate_keyword(char *cur, int *idx, int line, int character) {
-  char *keyword = malloc(sizeof(char) * 32);
+  char *keyword = (char*)malloc(sizeof(char) * 32);
   size_t keyword_len = 0;
   while (isalpha(cur[*idx]) || cur[*idx] == '_' || cur[*idx] == '.') {
     keyword[keyword_len] = cur[*idx];
@@ -108,7 +108,7 @@ Lexer *lexer(char *file_path) {
   char *cur = open_file(file_path, &len);
   int idx = 0;
 
-  Lexer *lexer = malloc(sizeof(Lexer));
+  Lexer *lexer = (Lexer*)malloc(sizeof(Lexer));
   int pos_line = 1;
   int pos_char = 1;
 

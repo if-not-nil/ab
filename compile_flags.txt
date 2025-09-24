@@ -2,4 +2,4 @@
 -Wextra
 -Wno-missing-field-initializers
 -g
--std=c23
+-std=c++23
