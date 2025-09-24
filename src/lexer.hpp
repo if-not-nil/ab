@@ -86,9 +86,9 @@ public:
       pos_char++;
       idx++;
     }
-#if LOG_LEVEL > 1
-    print_stack();
-#endif
+// #if LOG_LEVEL > 1
+//     print_stack();
+// #endif
   }
 
   Token generate_int(size_t &idx) {

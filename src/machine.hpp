@@ -5,8 +5,40 @@
 
 #include <cmath>
 #include <cstddef>
+#include <fstream>
 #include <stdexcept>
+#include <string>
 #include <vector>
+
+inline void prog_write_to_file(const std::vector<Inst> &program,
+                               const std::string path) {
+  std::ofstream file(path, std::ios::binary);
+  if (!file.is_open())
+    throw std::runtime_error("couldnt open file for writing? " + path);
+  file.write(reinterpret_cast<const char *>(
+                 program.data()), // `(const char*)val` is not used here, as it
+                                  // may do three or four different casts and
+                                  // give you bullshit
+             program.size() * sizeof(Inst));
+}
+
+inline std::vector<Inst> prog_read_from_file(const std::string &path) {
+  std::ifstream file(path, std::ios::binary | std::ios::ate);
+  if (!file)
+    throw std::runtime_error("could not open file for reading: " + path);
+
+  std::streamsize size = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  if (size % sizeof(Inst) != 0)
+    throw std::runtime_error("file size is not a multiple of Inst size");
+
+  std::vector<Inst> program(size / sizeof(Inst));
+  if (!file.read(reinterpret_cast<char *>(program.data()), size))
+    throw std::runtime_error("failed to read program from file");
+
+  return program;
+}
 
 class Stack {
 public:
@@ -249,9 +281,9 @@ struct Machine {
       memory.store(stack.pop(), inst.val);
       break;
     }
-#if LOG_LEVEL > 2
-    print_stack(m);
-#endif
+    // #if LOG_LEVEL > 2
+    //     print_stack();
+    // #endif
   }
 };
 

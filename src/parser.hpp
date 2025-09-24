@@ -37,7 +37,7 @@ struct Parser {
           inst_i++;
       }
     };
-    print_tokens();
+    // print_tokens();
     // second pass for everything else
 
     for (size_t i = 0; i < tokens.size(); i++) {
@@ -56,7 +56,6 @@ struct Parser {
           throw std::runtime_error("no identifier after a jump instruction!");
 
         Token ident = lexer->stack[i + 2];
-        std::cout << "!" << ident.to_str() << " IDENT!!\n";
         if (ident.type != TOK_IDENT)
           throw std::runtime_error("whatever you have after the jump "
                                    "instruction isnt a valid label\n" +

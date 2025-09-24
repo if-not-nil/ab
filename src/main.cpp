@@ -1,308 +1,38 @@
-// yo remember to move things to separate header files when the length reaches
-// 500 lines
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <string>
-
-#include "common.hpp"
 #include "instructions.hpp"
 #include "lexer.hpp"
-#include "memory.hpp"
+#include "machine.hpp"
 #include "parser.hpp"
-
-
-void print_stack(Machine *machine) {
-  printf("\n=== stack size %d:\n", machine->stack_size);
-  for (int i = 0; i <= machine->stack_size - 1; i++) {
-    printf("%d ", machine->stack[i]);
-  }
-  putc('\n', stdout);
-}
-
-void prog_write_to_file(Machine *machine, char *path) {
-  FILE *file = fopen(path, "wb");
-  if (file == NULL) {
-    fprintf(stderr, "\ncoudlnt write file!!\n");
-    exit(1);
-  }
-  fwrite(machine->instructions, sizeof(machine->instructions[0]),
-         machine->program_size, file);
-  fclose(file);
-}
-
-void prog_read_from_file(Machine *machine, char *path) {
-  FILE *file = fopen(path, "rb");
-  if (file == NULL) {
-    fprintf(stderr, "\ncoudlnt read file!!\n");
-    exit(1);
-  }
-  Inst *instructions = (Inst *)malloc(sizeof(Inst) * MAX_STACK_SIZE);
-
-  fseek(file, 0, SEEK_END);
-  int len = ftell(file);
-  fseek(file, 0, SEEK_SET);
-  fread(instructions, sizeof(instructions[0]), len / 8, file);
-
-  machine->program_size = len / 8;
-  machine->instructions = instructions;
-
-  fclose(file);
-}
-
-// operations
-void push(Machine *machine, int val) {
-  LOG2("push@(%d): %d", machine->stack_size, val);
-  if (machine->stack_size >= MAX_STACK_SIZE)
-    RT_ERR("stack overflow! (push)");
-
-  machine->stack[machine->stack_size] = val;
-  machine->stack_size++;
-}
-
-int pop(Machine *machine) {
-  LOG2("pop");
-  if (machine->stack_size <= 0)
-    RT_ERR("stack underflow! (pop)");
-
-  machine->stack_size--;
-  return machine->stack[machine->stack_size];
-}
-
-int peek(Machine *machine, int depth) {
-  if (depth > machine->stack_size)
-    RT_ERR("tried to peek into the void (peek)");
-  LOG3("peek returned %d", machine->stack[machine->stack_size - depth - 1]);
-  return machine->stack[machine->stack_size - depth - 1];
-}
-
-void idup(Machine *machine, int index) {
-  if (index > machine->stack_size && index < 0) {
-    RT_ERR("index out of range (swap)");
-    exit(1);
-  };
-  push(machine, machine->stack[index]);
-}
-
-void iswap(Machine *machine, int index) {
-  if (index > machine->stack_size && index < 0) {
-    RT_ERR("index out of range (swap)");
-    exit(1);
-  };
-  int tmp = machine->stack[index];
-  machine->stack[index] = pop(machine);
-  push(machine, tmp);
-}
-
-//
-// running the thing
-//
-
-void execute_loop(Machine *m) {
-  int a, b;
-  for (size_t ip = 0; ip < m->program_size; ip++) {
-#if STEP_EXEC
-    getc(stdin);
-    printf("next\n");
-#endif
-    LOG2("INST %s, %d", inst_to_string(m->instructions[ip].type),
-         m->instructions[ip].val);
-    switch (m->instructions[ip].type) {
-    case INST_NOP:
-      continue;
-      break;
-    case INST_PUSH:
-      push(m, m->instructions[ip].val);
-      break;
-    case INST_POP:
-      pop(m);
-      break;
-    case INST_ADD: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs + rhs);
-      break;
-    }
-    case INST_DUP:
-      push(m, peek(m, 0));
-      break;
-    case INST_SUB:
-      a = pop(m);
-      b = pop(m);
-      push(m, b - a);
-      break;
-    case INST_MUL: {
-      a = pop(m);
-      b = pop(m);
-      push(m, a * b);
-      break;
-    }
-    case INST_DIV: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      if (rhs == 0)
-        RT_ERR("cannot divide by 0");
-      push(m, lhs / rhs);
-      break;
-    }
-    case INST_SWAP:
-      a = pop(m);
-      b = pop(m);
-      push(m, a);
-      push(m, b);
-      break;
-    case INST_PRINTC:
-      a = pop(m);
-      printf("%c", a); // TODO: abstract
-      break;
-    case INST_PRINT:
-      a = pop(m);
-      printf("%d", a); // TODO: abstract
-      break;
-    case INST_HALT:
-      exit(0);
-      break;
-    case INST_CMPE: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs == rhs);
-      break;
-    }
-    case INST_CMPL: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs < rhs);
-      break;
-    }
-    case INST_CMPG: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs > rhs);
-      break;
-    }
-    case INST_JMPZ:
-      if (pop(m) == 0) {
-        ip = m->instructions[ip].val - 1;
-      } else
-        continue;
-      break;
-    case INST_JMPNZ:
-      if (pop(m) != 0) {
-        ip = m->instructions[ip].val - 1;
-      } else
-        continue;
-      break;
-    case INST_CMPGE: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs >= rhs);
-      break;
-    }
-    case INST_CMPLE: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      push(m, lhs <= rhs);
-      break;
-    }
-    case INST_JMP:
-      ip = m->instructions[ip].val - 1;
-      break;
-    case INST_MOD: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      if (rhs == 0)
-        RT_ERR("cannot divide by 0");
-      push(m, lhs / rhs);
-      break;
-    }
-    case INST_INSWAP:
-      iswap(m, m->instructions[ip].val);
-      break;
-    case INST_INDUP:
-      idup(m, m->instructions[ip].val);
-      break;
-    case INST_NONE:
-      die("tried executing INST_NONE");
-      break;
-    case INST_POW: {
-      int rhs = pop(m);
-      int lhs = pop(m);
-      if (rhs == 0)
-        push(m, 1);
-      push(m, pow(lhs, rhs));
-      break;
-    }
-    case INST_OR:
-      push(m, peek(m, 0) || peek(m, 1));
-      break;
-    case INST_XOR:
-      push(m, peek(m, 0) ^ peek(m, 1));
-      break;
-    case INST_AND:
-      push(m, peek(m, 0) && peek(m, 1));
-      break;
-    case INST_OVER:
-      push(m, peek(m, 1));
-      break;
-    case INST_ROT: {
-      int c = pop(m);
-      int b = pop(m);
-      int a = pop(m);
-      push(m, b);
-      push(m, c);
-      push(m, a);
-      break;
-    }
-    case INST_NEG:
-      push(m, -(pop(m)));
-      break;
-    case INST_NOT: {
-      push(m, ~(pop(m)));
-      break;
-    }
-    case INST_LOAD:
-      push(m, val_load_i32(&m->memory, m->instructions[ip].val));
-      break;
-    case INST_STORE:
-      val_store_i32(&m->memory, pop(m), m->instructions[ip].val);
-      break;
-    }
-#if LOG_LEVEL > 2
-    print_stack(m);
-#endif
-  };
-}
+#include <iostream>
+#include <string>
 
 int main(int argc, char *argv[]) {
-  // Machine *machine = (Machine *)malloc(sizeof(Machine));
-  // machine->memory = mem_init(2048);
-  if (argc > 0) {
-    // printf("%s\n", argv[1]);
-    Lexer lex((std::string(argv[1])));
-    Parser parser(&lex);
-    for (Inst in : parser.instructions) {
-      std::cout << in.to_string();
-    }
-    exit(0);
-    // machine->instructions = Parser(lex);
-    // machine->program_size = prog_size;
+  if (argc < 3) {
+    std::cerr << "usage: ab <mode> <file>\n";
+    return 1;
   }
-  // LOG2("executing now");
-  // #ifdef INDEV
-  //   machine->instructions = program;
-  //   machine->program_size = PROGRAM_SIZE;
-  //   prog_write_to_file(machine, "./prog.ab");
-  // #else
-  //   prog_read_from_file(m, "./prog.ab");
-  // #endif /* ifdef INDEV */
 
-  // prog_write_to_file(machine, "./prog.ab");
-  // execute_loop(machine);
+  std::string mode = argv[1];
+  std::string file_path = argv[2];
 
-  //   LOG2("executed");
-  // #if (LOG_LEVEL >= 1)
-  //   print_stack(machine);
-  // #endif
+  Machine machine(2048);
+
+  if (mode == "load") {
+    Lexer lexer(file_path);
+    Parser parser(&lexer);
+
+    machine.load(parser.instructions);
+
+    prog_write_to_file(machine.program, "./prog.ab");
+
+    machine.execute();
+  } else if (mode == "run") {
+    machine.program = prog_read_from_file("./prog.ab");
+    machine.execute();
+  } else {
+    std::cerr << "Unknown mode: " << mode << "\n";
+    std::cerr << "Usage: ab <load|run> <file>\n";
+    return 1;
+  }
+
   return 0;
 }
