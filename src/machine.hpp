@@ -27,7 +27,7 @@ inline std::vector<Inst> prog_read_from_file(const std::string &path) {
   if (!file)
     throw std::runtime_error("could not open file for reading: " + path);
 
-  std::streamsize size = file.tellg();
+  auto size = file.tellg();
   file.seekg(0, std::ios::beg);
 
   if (size % sizeof(Inst) != 0)

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common.hpp"
 #include "instructions.hpp"
 #include <cstddef>
 #include <fstream>
@@ -114,7 +113,7 @@ public:
       type = TOK_LABEL_DEF;
       idx++;
     }
-    Token tok(pos_line, pos_char, (char *)word.c_str(), type);
+    Token tok(pos_line, pos_char, word, type);
     idx--;
     return tok;
   }

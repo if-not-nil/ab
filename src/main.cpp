@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
     machine.program = prog_read_from_file("./prog.ab");
     machine.execute();
   } else {
-    std::cerr << "Unknown mode: " << mode << "\n";
-    std::cerr << "Usage: ab <load|run> <file>\n";
+    std::cerr << "unknown mode: " << mode << "\n";
+    std::cerr << "usage: ab <load|run> <file>\n";
     return 1;
   }
 
