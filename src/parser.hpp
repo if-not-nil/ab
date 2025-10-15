@@ -1,15 +1,11 @@
 #pragma once
 
+#include "prelude.hpp"
 #include "lexer.hpp"
-#include <algorithm>
-#include <iostream>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 #define MAX_PROGRAM_SIZE 1024
 
-typedef std::tuple<std::string, int> Label;
+typedef std::tuple<std::string, WORD> Label;
 
 struct Macro { // theres no good reason to use a tuple for one and a struct for
                // another i just just gotta see tuple works
@@ -25,7 +21,7 @@ struct Parser {
 
   Parser(Lexer *lexer) {
     // first pass for labels
-    int inst_i = 0;
+    WORD inst_i = 0;
     for (size_t i = 0; i < lexer->stack.size(); i++) {
       Token tok = lexer->stack[i];
 

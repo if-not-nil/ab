@@ -1,23 +1,33 @@
-SRC_FILES = src/main.cpp
-CXX_FLAGS = -Wall -Wextra -Wno-missing-field-initializers -g -std=c++23
-CXX = c++
+CXX       := clang++
+CXXFLAGS  := -std=c++23 -Wall -Wextra -Wno-missing-field-initializers -g
+SRC_DIR   := src
+TARGET    := ab
+PCH       := $(SRC_DIR)/prelude.pch
+PCH_HEADER:= $(SRC_DIR)/prelude.hpp
+SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+OBJ_FILES := $(SRC_FILES:.cpp=.o)
 
-TARGET = ab
+all: $(TARGET)
 
-all:
-	${CXX} ${SRC_FILES} ${CXX_FLAGS} -o ${TARGET}
+$(TARGET): $(PCH) $(OBJ_FILES)
+	$(CXX) $(OBJ_FILES) $(CXXFLAGS) -o $@
 
-run:
-	@make all
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp $(PCH)
+	$(CXX) $(CXXFLAGS) -include-pch $(PCH) -c $< -o $@
+
+$(PCH): $(PCH_HEADER)
+	$(CXX) $(CXXFLAGS) -x c++-header $(PCH_HEADER) -o $(PCH)
+
+run: all
 	./${TARGET} load prog.aba
 
-run-bin:
-	@make all
+run-bin: all
 	./${TARGET} run prog.ab
 
-lex:
-	@make all
+lex: all
 	./${TARGET} lex prog.aba
 
 clean:
-	rm -f ${TARGET} *.o
+	rm -f $(TARGET) $(OBJ_FILES) $(PCH)
+
+.PHONY: all clean run

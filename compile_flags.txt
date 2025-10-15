@@ -3,3 +3,6 @@
 -Wno-missing-field-initializers
 -g
 -std=c++23
+-include-pch
+./src/prelude.pch
+

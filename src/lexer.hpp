@@ -1,11 +1,7 @@
 #pragma once
 
+#include "prelude.hpp"
 #include "instructions.hpp"
-#include <cstddef>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
 
 struct Token {
   Token(int line, int character, std::string text, TokenType type)

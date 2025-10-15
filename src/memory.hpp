@@ -1,11 +1,7 @@
-
 #pragma once
 
-#include <cstddef>
-#include <cstring>
-#include <vector>
+#include "prelude.hpp"
 
-#define WORD uint8_t
 
 struct Memory {
   std::vector<WORD> data;

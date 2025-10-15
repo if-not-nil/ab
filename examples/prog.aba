@@ -1,0 +1,8 @@
+fn 0
+  add
+  ret
+fn_end
+
+push 1
+push 2
+call 0

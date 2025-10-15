@@ -1,6 +1,4 @@
 #pragma once
-#include <stdio.h>
-#include <stdlib.h>
 
 // levels: 0 - none, 1 - print the stack after, 2 - print every push/pop
 #define LOG_LEVEL 3

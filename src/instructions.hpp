@@ -1,5 +1,4 @@
-#include <string.h>
-#include <string>
+#include "prelude.hpp"
 // if defined, the program is the one at the bottom of this file. else loaded
 // from prog.ab
 #define INDEV
@@ -44,7 +43,10 @@
   X(NOT, 0x48, "not")                                                          \
   X(LOAD, 0xF0, "load")                                                        \
   X(STORE, 0xF1, "store")                                                      \
-  X(HALT, 0xFF, "halt")
+  X(HALT, 0xFF, "halt")                                                        \
+  X(FN_DEF, 0xE0, "fn")                                                        \
+  X(CALL, 0xE1, "call")                                                        \
+  X(RETURN, 0xE2, "ret")
 
 #define TOKEN_LIST                                                             \
   X(INT, 0xD1, "int")                                                          \
@@ -54,7 +56,7 @@
   X(ERROR, 0xD5, "error")                                                      \
   X(LABEL_DEF, 0xD6, "label_def")                                              \
   X(MACRO_START, 0xD7, ".macro")                                               \
-  X(MACRO_END, 0xD9, ".endm")
+  X(MACRO_END, 0xD8, ".endm")
 
 // instructions enum
 typedef enum {
@@ -84,9 +86,10 @@ static inline const char *inst_to_string(InstType inst) {
 
 struct Inst {
   InstType type;
-  int val;
+  WORD val;
   std::string to_string() {
-    return std::string(inst_to_string(type)) + " (" + std::to_string(val) + ")\n";
+    return std::string(inst_to_string(type)) + " (" + std::to_string(val) +
+           ")\n";
   }
 };
 

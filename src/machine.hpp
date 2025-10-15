@@ -2,13 +2,10 @@
 
 #include "instructions.hpp"
 #include "memory.hpp"
-
-#include <cmath>
+#include "prelude.hpp"
 #include <cstddef>
-#include <fstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
+#include <map>
+#include <unordered_map>
 
 inline void prog_write_to_file(const std::vector<Inst> &program,
                                const std::string path) {
@@ -44,26 +41,26 @@ class Stack {
 public:
   explicit Stack(std::size_t max_size) : max_size(max_size) {}
 
-  void push(int val) {
+  void push(WORD val) {
     if (data.size() >= max_size)
       throw std::runtime_error("stack overflow! (push)");
     data.push_back(val);
     // std::cout << "push@(" << data.size() - 1 << "): " << val << "\n";
   }
 
-  int pop() {
+  WORD pop() {
     if (data.empty())
       throw std::runtime_error("stack underflow! (pop)");
-    int val = data.back();
+    WORD val = data.back();
     data.pop_back();
     // std::cout << "pop\n";
     return val;
   }
 
-  int peek(std::size_t depth = 0) const {
+  WORD peek(std::size_t depth = 0) const {
     if (depth >= data.size())
       throw std::runtime_error("tried to peek into the void (peek)");
-    int val = data[data.size() - depth - 1];
+    WORD val = data[data.size() - depth - 1];
     // std::cout << "peek returned " << val << "\n";
     return val;
   }
@@ -77,11 +74,12 @@ public:
   void swap(std::size_t index) {
     if (index >= data.size())
       throw std::runtime_error("index out of range (swap)");
-    int tmp = data[index];
+    WORD tmp = data[index];
     data[index] = pop();
     push(tmp);
   }
 
+  void resize(size_t size) { data.resize(size); }
   std::size_t size() const { return data.size(); }
 
 private:
@@ -94,13 +92,15 @@ enum Registers { REG_IP, REG_NUM };
 // executes instructions when given
 struct Machine {
   Stack stack;
+  Stack ret_stack;
   size_t stack_size;
   Memory memory;
   WORD registers[REG_NUM];
 
   std::vector<Inst> program;
+  std::unordered_map<WORD, WORD> functions;
 
-  Machine(size_t mem_size) : stack(1024), memory(mem_size) {};
+  Machine(size_t mem_size) : stack(1024), ret_stack(1024), memory(mem_size) {};
 
   void load(std::vector<Inst> program) {
     this->program = program;
@@ -108,21 +108,26 @@ struct Machine {
   };
   void execute() {
     while (registers[REG_IP] < program.size()) {
+      std::cout << inst_to_string(program[registers[REG_IP]].type) << ": "
+                << program[registers[REG_IP]].val << '\n';
       execute_instruction(program[registers[REG_IP]]);
       registers[REG_IP]++;
     }
   };
   void execute_instruction(Inst inst) {
     switch (inst.type) {
-    case INST_NOP:
+    case INST_NOP: {
       return;
       break;
-    case INST_PUSH:
+    }
+    case INST_PUSH: {
       stack.push(inst.val);
       break;
-    case INST_POP:
+    }
+    case INST_POP: {
       stack.pop();
       break;
+    }
     case INST_ADD: {
       WORD rhs = stack.pop();
       WORD lhs = stack.pop();
@@ -169,9 +174,10 @@ struct Machine {
       printf("%d", a); // TODO: abstract
       break;
     }
-    case INST_HALT:
+    case INST_HALT: {
       exit(0);
       break;
+    }
     case INST_CMPE: {
       WORD rhs = stack.pop();
       WORD lhs = stack.pop();
@@ -228,12 +234,14 @@ struct Machine {
       stack.push(lhs / rhs);
       break;
     }
-    case INST_INSWAP:
+    case INST_INSWAP: {
       stack.swap(inst.val);
       break;
-    case INST_INDUP:
+    }
+    case INST_INDUP: {
       stack.dup(inst.val);
       break;
+    }
     case INST_NONE: {
       throw std::runtime_error("tried executing INST_NONE");
       break;
@@ -280,7 +288,24 @@ struct Machine {
     case INST_STORE:
       memory.store(stack.pop(), inst.val);
       break;
+    case INST_RETURN:
+      // FN_ADD: reg_fn = [0]
+      //   add [1,2] -> 3 RS: [5]
+      //   ret [jmp]      RS:
+      //
+      // push 1 [1]
+      // push 2 [1,2]
+      // call 0 [1,2] RS: [5] -> [3], []
+      registers[REG_IP] = ret_stack.pop();
+    case INST_FN_DEF:
+      functions[(WORD)inst.val] = registers[REG_IP];
+      break;
+    case INST_CALL:
+      ret_stack.push(registers[REG_IP]);
+      registers[REG_IP] = functions.at(stack.pop());
+      break;
     }
+
     // #if LOG_LEVEL > 2
     //     print_stack();
     // #endif

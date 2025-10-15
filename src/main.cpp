@@ -1,9 +1,8 @@
+#include "prelude.hpp"
 #include "instructions.hpp"
 #include "lexer.hpp"
 #include "machine.hpp"
 #include "parser.hpp"
-#include <iostream>
-#include <string>
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
