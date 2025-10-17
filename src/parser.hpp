@@ -1,81 +1,124 @@
 #pragma once
 
-#include "prelude.hpp"
 #include "lexer.hpp"
-
-#define MAX_PROGRAM_SIZE 1024
+#include "machine.hpp"
 
 typedef std::tuple<std::string, WORD> Label;
 
-struct Macro { // theres no good reason to use a tuple for one and a struct for
-               // another i just just gotta see tuple works
-  std::string name;
-  std::vector<Inst> instructions;
-};
-
 struct Parser {
-  std::vector<Label> labels;
-  std::vector<Inst> instructions;
   std::vector<Token> tokens;
-  std::vector<Macro> macros;
+  Program prog;
 
   Parser(Lexer *lexer) {
-    // first pass for labels
-    WORD inst_i = 0;
-    for (size_t i = 0; i < lexer->stack.size(); i++) {
-      Token tok = lexer->stack[i];
+    // every program starts inside an implicit main
+    prog.functions["main"] = {};
+    parse_function_body(lexer->stack, 0, "main");
+    // for (auto f : prog.functions) {
+    //   std::cout << "===parsed function " << f.first << '\n';
+    //   for (auto i : f.second)
+    //     std::cout << i.to_string() << '\n';
+    //   std::cout << "===end " << f.first << '\n';
+    // }
+  }
 
+  size_t parse_function_body(const std::vector<Token> &tokens,
+                             size_t start_index, const std::string &fn_name) {
+    std::unordered_map<std::string, WORD> labels;
+    auto &insts = prog.functions[fn_name];
+    int ip = 0;
+    for (size_t i = start_index; i < tokens.size(); i++) {
+      const Token &tok = tokens[i];
+      if (tok.type == TOK_FN_DEF_END)
+        break;
       if (tok.type == TOK_LABEL_DEF) {
-        labels.push_back({tok.text, inst_i});
-      } else {
-        tokens.push_back(Token(tok.line, tok.character, tok.text, tok.type));
-        if (tok.type < 0xD0 || tok.type > 0xDF)
-          inst_i++;
-      }
-    };
-    // print_tokens();
-    // second pass for everything else
+        labels[tok.text] = ip;
+        continue;
+      } else if (!(tok.type == TOK_LABEL_DEF || tok.type == TOK_FN_DEF ||
+                   tok.type == TOK_FN_DEF_END))
+        ip++;
+    }
 
-    for (size_t i = 0; i < tokens.size(); i++) {
-      Token tok = tokens[i];
+    for (size_t i = start_index; i < tokens.size(); i++) { // pass 2
+      const Token &tok = tokens[i];
+
+      // nested fn
+      if (tok.type == TOK_FN_DEF) {
+        if (i + 1 >= tokens.size())
+          throw std::runtime_error("<func> without name");
+        i++;
+        Token name_tok = tokens[i];
+        std::cout << "ran into a nested function " << name_tok.to_str() << '\n';
+        if (name_tok.type != TOK_IDENT)
+          throw std::runtime_error("<func> not followed by identifier");
+
+        prog.functions[name_tok.text] = {};
+        std::cout << "trying to parse a function from "
+                  << tokens[i + 1].to_str() << '\n';
+        i = parse_function_body(tokens, i + 1, name_tok.text);
+        continue;
+      }
+
+      if (tok.type == TOK_FN_DEF_END)
+        return i;
 
       if (tok.type == TOK_INT) {
-        if (i == 0)
-          throw std::runtime_error("a number cant be the first token!");
-        instructions.back().val = std::stoi(tok.text);
+        if (insts.empty())
+          throw std::runtime_error("a number can't be the first token");
+        insts.back().val = std::stoi(tok.text);
         continue;
       }
 
       if (tok.type == TOK_JMP || tok.type == TOK_JMPZ ||
-          tok.type == TOK_JMPNZ) {
-        if (i + 1 >= lexer->stack.size())
-          throw std::runtime_error("no identifier after a jump instruction!");
+          tok.type == TOK_JMPNZ || tok.type == TOK_CALL) {
+        if (i + 1 >= tokens.size())
+          throw std::runtime_error("no identifier after jump/call");
 
-        Token ident = lexer->stack[i + 2];
+        const Token &ident = tokens[i + 1];
         if (ident.type != TOK_IDENT)
-          throw std::runtime_error("whatever you have after the jump "
-                                   "instruction isnt a valid label\n" +
-                                   ident.to_str());
+          throw std::runtime_error("invalid label after jump/call: " +
+                                   ident.text);
 
-        auto it = // take c++ away from me bruh
-            std::find_if(labels.begin(), labels.end(), [&](const Label &l) {
-              return std::get<0>(l) == ident.text;
-            });
+        WORD val = 0;
+        if (tok.type == TOK_CALL) {
+          val = find_function_index(ident.text);
+        } else {
+          val = labels[ident.text];
+        }
 
-        if (it == labels.end())
-          throw std::runtime_error("undefined label " + ident.text);
-
-        instructions.push_back(
-            {.type = token_to_inst(tok.type), .val = std::get<1>(*it)});
+        if (token_to_inst(tok.type) == INST_NONE)
+          std::cout << ip << ": jmp: got TOK_NONE " << tok.to_str() << '\n';
+        insts.push_back({.type = token_to_inst(tok.type), .val = val});
         i++;
+        ip++;
         continue;
-      } // JMP TOKEN END
-      instructions.push_back({.type = token_to_inst(tok.type)});
-    };
-  }
-  void print_tokens() {
-    for (auto it : tokens) {
-      std::cout << it.to_str();
+      }
+
+      if (is_meta(tok.type))
+        std::cout << ip << ": got TOK_NONE" << tok.to_str() << '\n';
+      else {
+        insts.push_back({.type = token_to_inst(tok.type)});
+      }
+      ip++;
     }
+
+    return tokens.size() - 1;
+  }
+
+  // WORD find_label_index(const std::string &name) const {
+  //   for (const auto &l : labels)
+  //     if (std::get<0>(l) == name)
+  //       return std::get<1>(l);
+  //   throw std::runtime_error("undefined label: " + name);
+  // }
+
+  bool is_meta(TokenType tok) { return (tok == TOK_LABEL_DEF); };
+  WORD find_function_index(const std::string &name) const {
+    WORD idx = 0;
+    for (const auto &pair : prog.functions) {
+      if (pair.first == name)
+        return idx;
+      idx++;
+    }
+    throw std::runtime_error("undefined function: " + name);
   }
 };

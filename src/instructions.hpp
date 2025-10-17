@@ -44,9 +44,8 @@
   X(LOAD, 0xF0, "load")                                                        \
   X(STORE, 0xF1, "store")                                                      \
   X(HALT, 0xFF, "halt")                                                        \
-  X(FN_DEF, 0xE0, "fn")                                                        \
-  X(CALL, 0xE1, "call")                                                        \
-  X(RETURN, 0xE2, "ret")
+  X(CALL, 0xE2, "call")                                                        \
+  X(RETURN, 0xE3, "ret")
 
 #define TOKEN_LIST                                                             \
   X(INT, 0xD1, "int")                                                          \
@@ -56,6 +55,8 @@
   X(ERROR, 0xD5, "error")                                                      \
   X(LABEL_DEF, 0xD6, "label_def")                                              \
   X(MACRO_START, 0xD7, ".macro")                                               \
+  X(FN_DEF, 0xE0, "fn")                                                        \
+  X(FN_DEF_END, 0xE1, "endfn")                                                 \
   X(MACRO_END, 0xD8, ".endm")
 
 // instructions enum
@@ -93,18 +94,6 @@ struct Inst {
   }
 };
 
-static inline InstType token_to_inst(TokenType tok) {
-  switch (tok) {
-#define X(sym, opcode, str)                                                    \
-  case TOK_##sym:                                                              \
-    return INST_##sym;
-    INSTRUCTION_LIST
-#undef X
-  default:
-    return INST_NONE;
-  }
-}
-
 static inline const char *token_to_string(TokenType tok) {
   switch (tok) {
 #define X(name, opcode, str)                                                   \
@@ -115,6 +104,20 @@ static inline const char *token_to_string(TokenType tok) {
 #undef X
   default:
     return "unknown";
+  }
+}
+
+static inline InstType token_to_inst(TokenType tok) {
+  switch (tok) {
+#define X(sym, opcode, str)                                                    \
+  case TOK_##sym:                                                              \
+    return INST_##sym;
+    INSTRUCTION_LIST
+#undef X
+  default: {
+    // std::cout << "ran into INST_NONE "<< token_to_string(tok) << '\n';
+    return INST_NONE;
+  }
   }
 }
 

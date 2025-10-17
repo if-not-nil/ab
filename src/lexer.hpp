@@ -1,20 +1,16 @@
 #pragma once
 
-#include "prelude.hpp"
 #include "instructions.hpp"
+#include "prelude.hpp"
 
 struct Token {
-  Token(int line, int character, std::string text, TokenType type)
-      : type(type), text(text), line(line), character(character) {};
-  std::string to_str() {
+  Token(std::string text, TokenType type) : type(type), text(text) {};
+  std::string to_str() const {
     return "TOK{type=" + std::string(token_to_string(type)) + ",text=" + text +
-           ",line=" + std::to_string(line) +
-           ",character=" + std::to_string(character) + "}\n";
+           "}";
   };
   TokenType type;
   std::string text;
-  int line;
-  int character;
 };
 
 // file contents as a string
@@ -47,13 +43,6 @@ public:
     return a;
   }
   void push(Token tok) { stack.push_back(tok); }
-  void print_stack() {
-    printf("\n=== lexer stack size %zu:\n", stack.size());
-    for (auto item : stack) {
-      printf("%d ", item.type);
-    }
-    printf("\n===\n");
-  }
   void lex() {
     size_t idx = 0;
     while (idx < contents.size()) {
@@ -81,9 +70,10 @@ public:
       pos_char++;
       idx++;
     }
-// #if LOG_LEVEL > 1
-//     print_stack();
-// #endif
+#if LOG_LEVEL > 1
+    for (auto t : stack)
+      std::cout << t.to_str() << '\n';
+#endif
   }
 
   Token generate_int(size_t &idx) {
@@ -91,7 +81,7 @@ public:
     while (idx < contents.size() && std::isdigit(contents[idx]))
       idx++;
     std::string number = contents.substr(start, idx - start);
-    Token tok(pos_line, pos_char, (char *)number.c_str(), TOK_INT);
+    Token tok((char *)number.c_str(), TOK_INT);
     idx--;
     return tok;
   }
@@ -109,7 +99,7 @@ public:
       type = TOK_LABEL_DEF;
       idx++;
     }
-    Token tok(pos_line, pos_char, word, type);
+    Token tok(word, type);
     idx--;
     return tok;
   }

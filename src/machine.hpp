@@ -3,39 +3,11 @@
 #include "instructions.hpp"
 #include "memory.hpp"
 #include "prelude.hpp"
-#include <cstddef>
-#include <map>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
 #include <unordered_map>
-
-inline void prog_write_to_file(const std::vector<Inst> &program,
-                               const std::string path) {
-  std::ofstream file(path, std::ios::binary);
-  if (!file.is_open())
-    throw std::runtime_error("couldnt open file for writing? " + path);
-  file.write(reinterpret_cast<const char *>(
-                 program.data()), // `(const char*)val` is not used here, as it
-                                  // may do three or four different casts and
-                                  // give you bullshit
-             program.size() * sizeof(Inst));
-}
-
-inline std::vector<Inst> prog_read_from_file(const std::string &path) {
-  std::ifstream file(path, std::ios::binary | std::ios::ate);
-  if (!file)
-    throw std::runtime_error("could not open file for reading: " + path);
-
-  auto size = file.tellg();
-  file.seekg(0, std::ios::beg);
-
-  if (size % sizeof(Inst) != 0)
-    throw std::runtime_error("file size is not a multiple of Inst size");
-
-  std::vector<Inst> program(size / sizeof(Inst));
-  if (!file.read(reinterpret_cast<char *>(program.data()), size))
-    throw std::runtime_error("failed to read program from file");
-
-  return program;
-}
 
 class Stack {
 public:
@@ -89,32 +61,99 @@ private:
 
 enum Registers { REG_IP, REG_NUM };
 
+struct Program {
+  // std::vector<std::tuple<std::string, std::vector<Inst>>> functions;
+  std::map<std::string, std::vector<Inst>> functions;
+  void write_to_file(std::string path) {
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open())
+      throw std::runtime_error("couldnt open file for writing? " + path);
+    size_t fn_count = functions.size();
+    file.write(reinterpret_cast<const char *>(&fn_count), sizeof(fn_count));
+
+    for (const auto &fn : functions) {
+      auto name = fn.first;
+      auto insts = fn.second;
+      size_t name_len = name.size();
+
+      file.write(reinterpret_cast<const char *>(&name_len), sizeof(name_len));
+      file.write(name.data(), name_len);
+
+      size_t inst_count = insts.size();
+      file.write(reinterpret_cast<const char *>(&inst_count),
+                 sizeof(inst_count));
+
+      file.write(reinterpret_cast<const char *>(insts.data()),
+                 inst_count * sizeof(Inst));
+    }
+    file.close();
+  }
+
+  void read_from_file(const std::string &path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open())
+      throw std::runtime_error("couldnt open file for reading? " + path);
+    functions.clear();
+
+    size_t fn_count = 0;
+    file.read(reinterpret_cast<char *>(&fn_count), sizeof(fn_count));
+
+    for (size_t i = 0; i < fn_count; ++i) {
+      size_t name_len = 0;
+      file.read(reinterpret_cast<char *>(&name_len), sizeof(name_len));
+      std::string name(name_len, '\0');
+      file.read((char *)name.data(),
+                name_len); // idk why it didnt let me withuot converting it
+
+      size_t inst_count = 0;
+      file.read(reinterpret_cast<char *>(&inst_count), sizeof(inst_count));
+      std::vector<Inst> insts(inst_count);
+      file.read(reinterpret_cast<char *>(insts.data()),
+                inst_count * sizeof(Inst));
+
+      functions.emplace(name, std::move(insts));
+    }
+  }
+};
+
+struct ReturnFrame {
+  std::string fn_name;
+  WORD ip;
+};
+
 // executes instructions when given
 struct Machine {
   Stack stack;
-  Stack ret_stack;
   size_t stack_size;
   Memory memory;
+  Program program;
   WORD registers[REG_NUM];
+  std::string cur_fn;
+  std::vector<ReturnFrame> call_stack;
 
-  std::vector<Inst> program;
-  std::unordered_map<WORD, WORD> functions;
+  Machine(size_t mem_size) : stack(1024), memory(mem_size) {};
 
-  Machine(size_t mem_size) : stack(1024), ret_stack(1024), memory(mem_size) {};
+  void load(Program prog) {
+    this->program = prog;
+    this->registers[REG_IP] = 0;
+  }
 
-  void load(std::vector<Inst> program) {
-    this->program = program;
+  void execute(std::string function) {
+    cur_fn = function;
     registers[REG_IP] = 0;
-  };
-  void execute() {
-    while (registers[REG_IP] < program.size()) {
-      std::cout << inst_to_string(program[registers[REG_IP]].type) << ": "
-                << program[registers[REG_IP]].val << '\n';
-      execute_instruction(program[registers[REG_IP]]);
+
+    while (true) {
+      auto &insts = program.functions.at(cur_fn);
+
+      if (registers[REG_IP] >= insts.size())
+        break;
+
+      execute_instruction(insts[registers[REG_IP]]);
       registers[REG_IP]++;
     }
-  };
+  }
   void execute_instruction(Inst inst) {
+    // std::cout << inst.to_string() << '\n';
     switch (inst.type) {
     case INST_NOP: {
       return;
@@ -288,27 +327,26 @@ struct Machine {
     case INST_STORE:
       memory.store(stack.pop(), inst.val);
       break;
-    case INST_RETURN:
-      // FN_ADD: reg_fn = [0]
-      //   add [1,2] -> 3 RS: [5]
-      //   ret [jmp]      RS:
-      //
-      // push 1 [1]
-      // push 2 [1,2]
-      // call 0 [1,2] RS: [5] -> [3], []
-      registers[REG_IP] = ret_stack.pop();
-    case INST_FN_DEF:
-      functions[(WORD)inst.val] = registers[REG_IP];
-      break;
-    case INST_CALL:
-      ret_stack.push(registers[REG_IP]);
-      registers[REG_IP] = functions.at(stack.pop());
+    case INST_RETURN: {
+      if (call_stack.empty())
+        throw std::runtime_error("return with empty call stack");
+      auto frame = call_stack.back();
+      call_stack.pop_back();
+      cur_fn = frame.fn_name;
+      registers[REG_IP] = frame.ip;
       break;
     }
+    case INST_CALL: {
+      call_stack.push_back({cur_fn, registers[REG_IP]});
+      WORD target_idx = inst.val;
 
-    // #if LOG_LEVEL > 2
-    //     print_stack();
-    // #endif
+      auto it = program.functions.begin();
+      std::advance(it, target_idx);
+      cur_fn = it->first;
+      registers[REG_IP] = -1; // its incremented to 0 right after breaking
+      break;
+    }
+    }
   }
 };
 

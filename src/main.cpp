@@ -1,8 +1,8 @@
-#include "prelude.hpp"
 #include "instructions.hpp"
 #include "lexer.hpp"
 #include "machine.hpp"
 #include "parser.hpp"
+#include "prelude.hpp"
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
@@ -19,14 +19,14 @@ int main(int argc, char *argv[]) {
     Lexer lexer(file_path);
     Parser parser(&lexer);
 
-    machine.load(parser.instructions);
+    machine.load(parser.prog);
 
-    prog_write_to_file(machine.program, "./prog.ab");
+    // machine.program.write_to_file("./prog.ab");
 
-    machine.execute();
+    machine.execute("main");
   } else if (mode == "run") {
-    machine.program = prog_read_from_file("./prog.ab");
-    machine.execute();
+    // machine.program.read_from_file("./prog.ab");
+    machine.execute("main");
   } else {
     std::cerr << "unknown mode: " << mode << "\n";
     std::cerr << "usage: ab <load|run> <file>\n";

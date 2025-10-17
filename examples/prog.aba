@@ -1,8 +1,22 @@
-fn 0
+fn fib
+  dup
+  push 1
+  cmple
+  jmpnz BASE_CASE
+  dup
+  push 1
+  sub
+  call fib
+  swap
+  push 2
+  sub
+  call fib
   add
   ret
-fn_end
+BASE_CASE:
+  ret
+endfn
 
-push 1
-push 2
-call 0
+push 5
+call fib
+print
